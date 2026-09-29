@@ -1,0 +1,46 @@
+name: Kubernetes Cluster Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - chore/ci-k8s-clean
+
+jobs:
+  check-k8s:
+    name: Check Kubernetes Cluster and Quotas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Restore and configure kubeconfig
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG_DATA" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl config set-context --current --namespace=polytech-dams5-07
+
+      - name: Run cluster verifications
+        run: |
+          echo "::group::Get Pods"
+          kubectl get pods
+          echo "::endgroup::"
+
+          echo "::group::Get Services"
+          kubectl get services
+          echo "::endgroup::"
+
+          echo "::group::Get Ingress"
+          kubectl get ingress
+          echo "::endgroup::"
+
+          echo "::group::Describe ResourceQuota"
+          kubectl describe resourcequota
+          echo "::endgroup::"

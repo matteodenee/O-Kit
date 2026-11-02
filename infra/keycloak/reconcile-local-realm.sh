@@ -182,8 +182,8 @@ kcadm update "clients/$MOBILE_CLIENT_UUID" -r "$REALM" \
   -s directAccessGrantsEnabled=false \
   -s serviceAccountsEnabled=false \
   -s fullScopeAllowed=false \
-  -s 'redirectUris=["okit://auth","http://localhost:8081","http://localhost:8081/*","https://dams5-07.students.polytech.lange.xyz","https://dams5-07.students.polytech.lange.xyz/*"]' \
-  -s 'webOrigins=["http://localhost:8081","https://dams5-07.students.polytech.lange.xyz"]' \
+  -s 'redirectUris=["okit://auth","http://localhost:19006","http://localhost:19006/*","https://dams5-07.students.polytech.lange.xyz","https://dams5-07.students.polytech.lange.xyz/*"]' \
+  -s 'webOrigins=["http://localhost:19006","https://dams5-07.students.polytech.lange.xyz"]' \
   -s 'attributes."pkce.code.challenge.method"=S256' \
   -s 'defaultClientScopes=["basic","profile","email","roles","web-origins"]' \
   -s 'optionalClientScopes=["address","phone","offline_access"]' >/dev/null

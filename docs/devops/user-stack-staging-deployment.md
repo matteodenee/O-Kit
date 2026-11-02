@@ -5,14 +5,14 @@
 Cet overlay déploie uniquement le parcours utilisateur :
 
 - Keycloak et sa base PostgreSQL dédiée ;
-- `user-service` et sa base PostgreSQL dédiée ;
+- `user-service`, connecté à la base logique `okit_users` de PostgreSQL mutualisé ;
 - `api-gateway` ;
 - les routes Ingress `/api`, `/realms` et `/resources` ;
 - les `ServiceMonitor` de ces trois composants.
 
 Il ne contient ni catalogue ni backoffice. Les ressources historiques `nginx`,
 `okit-backend`, `postgres-db`, `pgdata-pvc` et le Secret TLS `nginx-tls` ne sont
-ni modifiés ni supprimés.
+ni supprimés. `postgres-db` doit héberger `okit_users` avant le déploiement.
 
 ## Images
 
@@ -33,10 +33,10 @@ les logs ou les manifests versionnés.
 
 ## Bases et persistance
 
-Les bases `keycloak-postgres` et `user-postgres` possèdent chacune leur propre
-PVC de 2 Gio sur la classe `nfs-tower`. Elles ne réutilisent pas `postgres-db`
-ni `pgdata-pvc`, qui appartiennent au backend historique et doivent être
-préservés intégralement.
+Keycloak conserve sa base et son PVC dédiés. Le service Utilisateur réutilise
+l'instance physique `postgres-db` avec une base logique indépendante
+`okit_users` et des credentials propres. Les autres bases de cette instance ne
+doivent pas être lues, modifiées ou supprimées.
 
 Les Secrets requis sont :
 
@@ -54,7 +54,7 @@ Depuis la racine du dépôt :
 
 ```bash
 docker build --pull -t registry.gitlab.com/iwa-group2/o-kit/keycloak:a08da78 infra/keycloak
-docker build --pull -t registry.gitlab.com/iwa-group2/o-kit/user-service:a08da78 services/user-service
+docker build --pull -t registry.gitlab.com/iwa-group2/o-kit/user-service:a08da78 backend/ms-utilisateur
 docker build --pull -t registry.gitlab.com/iwa-group2/o-kit/api-gateway:a08da78 services/api-gateway
 
 docker push registry.gitlab.com/iwa-group2/o-kit/keycloak:a08da78
@@ -85,11 +85,14 @@ Après validation du diff :
 1. créer directement dans Kubernetes les Secrets manquants ;
 2. appliquer PostgreSQL Keycloak et attendre sa disponibilité ;
 3. appliquer Keycloak et vérifier son rollout, son issuer OIDC et ses métriques ;
-4. appliquer PostgreSQL utilisateur et attendre sa disponibilité ;
+4. vérifier que `okit_users` et son compte existent sur PostgreSQL mutualisé ;
 5. appliquer `user-service`, vérifier Flyway, les probes et les métriques ;
 6. appliquer `api-gateway`, puis l'Ingress ;
 7. vérifier `/realms`, `/resources`, le `401` sans JWT, le succès avec un JWT
    `BUYER`, le refus sans ce rôle et les cibles Prometheus.
 
 Un retour arrière restaure uniquement les workloads applicatifs ou retire les
-routes ajoutées. Aucun PVC ne doit être supprimé.
+routes ajoutées. Aucun PVC ni aucune base ne doit être supprimé.
+
+Les actions à reprendre lors de l'intégration finale sont regroupées dans la
+[checklist d'intégration du service Utilisateur](user-service-integration-checklist.md).

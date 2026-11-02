@@ -42,9 +42,9 @@ curl --fail \
 
 # Sans JWT, le statut attendu est 401, émis par api-gateway.
 curl --output /dev/null --write-out '%{http_code}\n' \
-  https://dams5-07.students.polytech.lange.xyz/api/users/me
+  https://dams5-07.students.polytech.lange.xyz/api/v1/users/me
 ```
 
-Avec un JWT valide, `GET /api/users/me` est routé vers `user-service`, qui
+Avec un JWT valide, `GET /api/v1/users/me` est routé vers `user-service`, qui
 valide à nouveau le token. Les détails d'architecture sont documentés dans
 [`docs/devops/edge-gateway-kubernetes.md`](../../../docs/devops/edge-gateway-kubernetes.md).

@@ -40,7 +40,7 @@ async function parseProfileResponse(response: Response): Promise<UserProfile> {
 }
 
 export async function getCurrentUserProfile(authenticatedFetch: AuthenticatedFetch) {
-  const response = await authenticatedFetch(`${apiBaseUrl}/api/users/me`);
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/users/me`);
 
   if (response.status === 404) {
     return null;
@@ -52,7 +52,7 @@ export async function saveCurrentUserProfile(
   authenticatedFetch: AuthenticatedFetch,
   profile: UserProfileInput
 ) {
-  const response = await authenticatedFetch(`${apiBaseUrl}/api/users/me`, {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/users/me`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

@@ -50,13 +50,13 @@
       "fullScopeAllowed": false,
       "redirectUris": [
         "okit://auth",
-        "http://localhost:8081",
-        "http://localhost:8081/*",
+        "http://localhost:19006",
+        "http://localhost:19006/*",
         "https://dams5-07.students.polytech.lange.xyz",
         "https://dams5-07.students.polytech.lange.xyz/*"
       ],
       "webOrigins": [
-        "http://localhost:8081",
+        "http://localhost:19006",
         "https://dams5-07.students.polytech.lange.xyz"
       ],
       "attributes": {

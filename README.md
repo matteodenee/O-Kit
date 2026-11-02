@@ -9,8 +9,10 @@ vendeur.
 
 Le MVP d'authentification et de profil de `user-service` est terminé :
 
-- `GET /api/users/me` consulte le profil de l'acheteur courant ;
-- `PUT /api/users/me` crée ou remplace ce profil ;
+- `GET /api/v1/users/me` consulte le profil de l'acheteur courant ;
+- `PUT /api/v1/users/me` crée ou remplace ce profil ;
+- `GET /api/v1/users/me/id` expose uniquement son UUID métier aux services
+  agissant avec son JWT ;
 - PostgreSQL conserve prénom, nom, téléphone et date de naissance facultative ;
 - Keycloak reste propriétaire des comptes, mots de passe, e-mails, sessions et
   rôles ;
@@ -28,12 +30,12 @@ domaine catalogue.
 
 | Composant | Rôle | URL locale |
 | --- | --- | --- |
-| Keycloak | Identités, rôles et parcours OIDC | `http://localhost:8080` |
+| Keycloak | Identités, rôles et parcours OIDC | `http://localhost:8090` |
 | Mailpit | Courriels de développement | `http://localhost:8025` |
-| PostgreSQL | Base propre à `user-service` | `localhost:5432` |
-| `user-service` | Profil métier acheteur | `http://localhost:8082` |
-| `api-gateway` | Entrée des API | `http://localhost:8083` |
-| Client Expo | Application acheteur | `http://localhost:8081` |
+| PostgreSQL | Instance locale mutualisable, base logique `okit_users` | `localhost:5432` |
+| `user-service` | Profil métier acheteur | `http://localhost:8081` |
+| `api-gateway` | Entrée des API | `http://localhost:8080` |
+| Client Expo | Application acheteur | `http://localhost:19006` |
 | Backoffice React | Authentification vendeur | `http://localhost:5173` |
 
 ## Démarrage rapide
@@ -65,11 +67,11 @@ set +a
 Vérification rapide :
 
 ```bash
-curl --fail http://127.0.0.1:8080/realms/okit/.well-known/openid-configuration
-curl --fail http://127.0.0.1:8082/health
-curl --fail http://127.0.0.1:8083/health
-curl --include http://127.0.0.1:8083/api/users/me
-./services/user-service/scripts/test-local-user-flow.sh
+curl --fail http://127.0.0.1:8090/realms/okit/.well-known/openid-configuration
+curl --fail http://127.0.0.1:8081/health
+curl --fail http://127.0.0.1:8080/health
+curl --include http://127.0.0.1:8080/api/v1/users/me
+./backend/ms-utilisateur/scripts/test-local-user-flow.sh
 ```
 
 Les trois premières requêtes doivent réussir, la quatrième doit retourner
@@ -98,7 +100,7 @@ npm run dev
 ## Vérifications automatisées
 
 ```bash
-cd services/user-service
+cd backend/ms-utilisateur
 mvn verify
 ```
 
@@ -114,8 +116,9 @@ SELLER, se trouve dans [`README_DEVELOPPEUR.md`](README_DEVELOPPEUR.md).
 
 ## Documentation
 
-- [`user-service`](services/user-service/README.md)
+- [`user-service`](backend/ms-utilisateur/README.md)
 - [Contrat OpenAPI](docs/api/user-service.openapi.yaml)
+- [Contrat d'intégration interservices](docs/api/user-service-integration.md)
 - [Modèle de données](docs/architecture/user-service-data-model.md)
 - [Authentification Keycloak](docs/auth/keycloak.md)
 - [Parcours mobile](docs/mobile/auth-profile-flow.md)

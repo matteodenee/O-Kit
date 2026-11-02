@@ -9,9 +9,9 @@ conserve ensuite le profil métier.
 Les valeurs par défaut correspondent à Docker Compose :
 
 ```text
-Keycloak    http://localhost:8080
-Expo Web   http://localhost:8081
-API Gateway http://localhost:8083
+Keycloak    http://localhost:8090
+Expo Web   http://localhost:19006
+API Gateway http://localhost:8080
 ```
 
 Pour surcharger les URL sans ajouter de secret :
@@ -38,9 +38,9 @@ npm ci
 npm run web
 ```
 
-Ouvrir `http://localhost:8081`. Après connexion ou inscription, le formulaire
-appelle la gateway pour charger `GET /api/users/me`. Un profil absent peut être
-créé par le bouton « Enregistrer mon profil », qui appelle `PUT /api/users/me`.
+Ouvrir `http://localhost:19006`. Après connexion ou inscription, le formulaire
+appelle la gateway pour charger `GET /api/v1/users/me`. Un profil absent peut être
+créé par le bouton « Enregistrer mon profil », qui appelle `PUT /api/v1/users/me`.
 
 Le client renouvelle automatiquement l'access token avant expiration et retente
 une seule fois un appel ayant reçu `401`. Les sessions natives sont conservées

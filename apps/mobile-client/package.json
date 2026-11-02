@@ -28,10 +28,10 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
+    "start": "expo start --port 19006",
+    "android": "expo run:android --port 19006",
+    "ios": "expo run:ios --port 19006",
+    "web": "expo start --web --port 19006",
     "test": "node --test tests/*.test.mjs",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit"

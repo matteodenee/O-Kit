@@ -1,15 +1,15 @@
 openapi: 3.1.0
 info:
   title: O'kit User Service API
-  version: 0.1.0
+  version: 0.2.0
   description: API du profil métier de l'acheteur authentifié. Le rôle realm Keycloak BUYER est obligatoire.
 servers:
-  - url: http://localhost:8082
+  - url: http://localhost:8081
     description: Développement local direct
 security:
   - bearerAuth: []
 paths:
-  /api/users/me:
+  /api/v1/users/me:
     get:
       operationId: getCurrentUserProfile
       summary: Consulter le profil de l'utilisateur authentifié
@@ -58,6 +58,31 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           description: Une modification concurrente empêche l'enregistrement du profil
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/users/me/id:
+    get:
+      operationId: getCurrentUserBusinessId
+      summary: Résoudre l'UUID métier de l'utilisateur authentifié
+      description: >-
+        Retourne uniquement l'identifiant métier associé au claim sub du JWT.
+        Cette route est destinée aux consommateurs agissant pour l'utilisateur
+        authentifié et n'accepte aucun identifiant fourni par le client.
+      responses:
+        "200":
+          description: Identifiant métier trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Aucun profil métier n'existe encore pour cet utilisateur
           content:
             application/problem+json:
               schema:
@@ -126,6 +151,15 @@ components:
             updatedAt:
               type: string
               format: date-time
+    UserId:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
     Problem:
       type: object
       properties:

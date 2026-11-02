@@ -12,7 +12,7 @@ ni e-mail persistant, ni rôle, ni donnée vendeur.
 
 Keycloak possède les comptes et les rôles :
 
-- `BUYER` utilise l'application Expo et `/api/users/**` ;
+- `BUYER` utilise l'application Expo et `/api/v1/users/**` ;
 - `SELLER` utilise uniquement le backoffice ;
 - un compte portant `SELLER`, ou simultanément `BUYER` et `SELLER`, reçoit
   `403 Forbidden` sur `user-service`.
@@ -64,6 +64,10 @@ Remplacer dans `.env` les deux valeurs `change-me-local-only` :
 KEYCLOAK_ADMIN_USERNAME=admin
 KEYCLOAK_ADMIN_PASSWORD=mot_de_passe_admin_local
 USER_DB_PASSWORD=mot_de_passe_postgres_local
+USER_DB_HOST=postgres
+USER_DB_PORT=5432
+USER_DB_NAME=okit_users
+USER_DB_USERNAME=okit_user
 ```
 
 Le fichier `.env` est ignoré par Git. Ne jamais y placer un secret destiné à
@@ -105,29 +109,29 @@ Le script est idempotent. Il configure le realm `okit`, les clients publics,
 PKCE S256, les rôles `BUYER`/`SELLER`, Mailpit et le thème vendeur sans
 réinitialiser le volume Keycloak.
 
-Administration : `http://localhost:8080/admin/`.
+Administration : `http://localhost:8090/admin/`.
 
 ## 7. Vérification rapide des services
 
 ```bash
-curl --fail http://127.0.0.1:8080/realms/okit/.well-known/openid-configuration
-curl --fail http://127.0.0.1:8082/health
-curl --fail http://127.0.0.1:8082/metrics
-curl --fail http://127.0.0.1:8083/health
-curl --include http://127.0.0.1:8083/api/users/me
+curl --fail http://127.0.0.1:8090/realms/okit/.well-known/openid-configuration
+curl --fail http://127.0.0.1:8081/health
+curl --fail http://127.0.0.1:8081/metrics
+curl --fail http://127.0.0.1:8080/health
+curl --include http://127.0.0.1:8080/api/v1/users/me
 ```
 
 Résultats attendus :
 
 - découverte OIDC, healthchecks et métriques : succès HTTP ;
-- `/api/users/me` sans token : `401 Unauthorized`.
+- `/api/v1/users/me` sans token : `401 Unauthorized`.
 
 ## 8. Test automatique complet BUYER
 
 Après avoir chargé `.env` comme à l'étape 6 :
 
 ```bash
-./services/user-service/scripts/test-local-user-flow.sh
+./backend/ms-utilisateur/scripts/test-local-user-flow.sh
 ```
 
 Le script crée puis nettoie un acheteur temporaire. Il vérifie :
@@ -157,7 +161,7 @@ npm ci
 npm run web
 ```
 
-Ouvrir `http://localhost:8081`, puis :
+Ouvrir `http://localhost:19006`, puis :
 
 1. créer un compte ;
 2. vérifier le retour automatique depuis Keycloak ;
@@ -174,9 +178,9 @@ puis accepter l'autorisation affichée sur l'appareil.
 
 ```bash
 adb devices -l
+adb reverse tcp:8090 tcp:8090
 adb reverse tcp:8080 tcp:8080
-adb reverse tcp:8081 tcp:8081
-adb reverse tcp:8083 tcp:8083
+adb reverse tcp:19006 tcp:19006
 adb reverse --list
 ```
 
@@ -191,7 +195,7 @@ Pour les lancements suivants, le build de développement déjà installé peut
 être réutilisé :
 
 ```bash
-npx expo start --dev-client --port 8081
+npx expo start --dev-client --port 19006
 ```
 
 Les redirections ADB sont à rejouer après un redémarrage du serveur ADB ou une
@@ -226,7 +230,7 @@ backoffice et refusé par `user-service`.
 Le scénario automatisé se lance depuis la racine, après chargement de `.env` :
 
 ```bash
-./services/user-service/scripts/test-local-seller-flow.sh
+./backend/ms-utilisateur/scripts/test-local-seller-flow.sh
 ```
 
 ## 12. Mot de passe oublié
@@ -244,7 +248,7 @@ Mailpit capture seulement les courriels locaux et n'envoie rien sur Internet.
 Backend et base isolée Testcontainers :
 
 ```bash
-cd services/user-service
+cd backend/ms-utilisateur
 mvn verify
 ```
 
@@ -281,13 +285,13 @@ git status
 
 | Composant | URL |
 | --- | --- |
-| Client Expo Web | `http://localhost:8081` |
+| Client Expo Web | `http://localhost:19006` |
 | Backoffice vendeur | `http://localhost:5173` |
-| Keycloak | `http://localhost:8080` |
-| Administration Keycloak | `http://localhost:8080/admin/` |
+| Keycloak | `http://localhost:8090` |
+| Administration Keycloak | `http://localhost:8090/admin/` |
 | Mailpit | `http://localhost:8025` |
-| API Gateway | `http://localhost:8083` |
-| `user-service` direct | `http://localhost:8082` |
+| API Gateway | `http://localhost:8080` |
+| `user-service` direct | `http://localhost:8081` |
 
 ## 15. Arrêt et dépannage
 
@@ -315,7 +319,7 @@ restaurer dans `.env` la valeur utilisée lors de la création du volume.
 
 ## 16. Documents de référence
 
-- [`services/user-service/README.md`](services/user-service/README.md)
+- [`backend/ms-utilisateur/README.md`](backend/ms-utilisateur/README.md)
 - [`docs/api/user-service.openapi.yaml`](docs/api/user-service.openapi.yaml)
 - [`docs/architecture/user-service-data-model.md`](docs/architecture/user-service-data-model.md)
 - [`docs/auth/keycloak.md`](docs/auth/keycloak.md)

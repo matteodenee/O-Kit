@@ -5,18 +5,19 @@
 Cette première tranche Kubernetes déploie :
 
 - `user-service` comme Deployment sans état ;
-- sa base PostgreSQL comme StatefulSet avec un volume persistant ;
-- les Services internes correspondants ;
+- son Service interne ;
 - les probes de démarrage, disponibilité et vivacité ;
-- un `ServiceMonitor` pour collecter `/metrics` ;
-- une NetworkPolicy limitant l'accès à PostgreSQL au service utilisateur.
+- un `ServiceMonitor` pour collecter `/metrics`.
+
+La base logique `okit_users` est hébergée par l'instance PostgreSQL mutualisée
+du projet. Aucun StatefulSet ni PVC PostgreSQL n'est créé par ces manifests.
 
 Le namespace cible est `polytech-dams5-07`.
 
 ## Exposition réseau
 
-`user-service` reste un Service interne. Traefik publie `/api/**` vers Spring
-Cloud Gateway, qui route ensuite `/api/users/**` vers le service sur l'hôte du
+`user-service` écoute sur 8081 et reste un Service interne. Traefik publie `/api/**` vers Spring
+Cloud Gateway, qui route ensuite `/api/v1/users/**` vers le service sur l'hôte du
 cluster :
 
 ```text
@@ -29,7 +30,10 @@ avant d'accéder aux données métier.
 
 ## Secrets
 
-Le mot de passe PostgreSQL n'est pas versionné. Un Secret nommé `user-service-secrets`, contenant la clé `database-password`, doit exister avant le déploiement.
+Le mot de passe PostgreSQL n'est pas versionné. Un Secret nommé
+`user-service-secrets`, contenant la clé `database-password`, doit exister
+avant le déploiement. L'hôte, le port, la base et l'utilisateur sont injectés
+par `USER_DB_HOST`, `USER_DB_PORT`, `USER_DB_NAME` et `USER_DB_USERNAME`.
 
 L'image du service est publiée sous
 `registry.gitlab.com/iwa-group2/o-kit/user-service:<sha-git>`. L'overlay conserve
@@ -42,13 +46,16 @@ Les ressources sont dimensionnées pour rester raisonnables dans le quota du nam
 
 | Composant | CPU demandé | Mémoire demandée | CPU maximum | Mémoire maximum |
 | --- | ---: | ---: | ---: | ---: |
-| `user-service` | 150m | 256Mi | 500m | 512Mi |
-| PostgreSQL | 100m | 256Mi | 500m | 512Mi |
+| `user-service` | 75m | 192Mi | 200m | 384Mi |
 
-PostgreSQL demande un PVC de 2 Gio. Le service utilisateur peut être redéployé sans perdre les profils ; la suppression volontaire du PVC reste une opération destructive distincte.
+La JVM limite son heap à 65 % de la mémoire visible afin de préserver une marge
+pour Metaspace, les threads et les buffers natifs. Le budget doit être confirmé
+par un démarrage sous limite de 384 Mi et réévalué à partir de mesures si les
+probes ou la charge réelle révèlent une pression mémoire.
 
-Le PVC utilise la classe `nfs-tower` et reste strictement séparé de
-`pgdata-pvc`, propriété du backend historique déjà présent dans le namespace.
+La migration d'une ancienne base dédiée vers `okit_users` doit être sauvegardée
+et validée séparément. Aucun manifest de cette tranche ne supprime un
+StatefulSet, un volume ou une base existante.
 
 ## Dépendances
 
@@ -58,4 +65,4 @@ interne `keycloak`, importent le realm `okit` et publient l'issuer HTTPS attendu
 La gateway applicative et l'Ingress sont fournis dans
 `infra/kubernetes/gateway`. Traefik conserve l'hôte et le certificat du cluster
 et route `/api/**` vers `api-gateway`, qui conserve le chemin
-`/api/users/**` lors de l'appel au service.
+`/api/v1/users/**` lors de l'appel au service.

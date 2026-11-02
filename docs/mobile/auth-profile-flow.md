@@ -57,11 +57,11 @@ table `user_profiles`.
   encore valable avec une marge de sécurité ;
 - à l'approche de l'expiration, le client renouvelle automatiquement l'access
   token avec le refresh token, sans secret client ;
-- le client appelle `GET /api/users/me` avec le bearer token ;
+- le client appelle `GET /api/v1/users/me` avec le bearer token ;
 - une réponse `200` préremplit le formulaire depuis la base métier ;
 - une réponse `404` affiche un formulaire vide, prérempli avec le prénom et le
   nom disponibles dans Keycloak ;
-- l'enregistrement appelle `PUT /api/users/me` puis affiche les données
+- l'enregistrement appelle `PUT /api/v1/users/me` puis affiche les données
   retournées par le service ;
 - une réponse `401` déclenche un seul renouvellement suivi d'une seule nouvelle
   tentative ; un second `401` ou un refresh refusé invalide la session locale
@@ -85,12 +85,12 @@ EXPO_PUBLIC_API_URL
 Valeurs locales par défaut :
 
 ```text
+http://localhost:8090
 http://localhost:8080
-http://localhost:8083
 ```
 
 Pour l'aperçu web local, Spring Cloud Gateway autorise uniquement l'origine
-`http://localhost:8081` et transmet les requêtes à `user-service`. En
+`http://localhost:19006` et transmet les requêtes à `user-service`. En
 Kubernetes, le client, la gateway et les APIs sont destinés à partager l'hôte
 HTTPS du groupe.
 

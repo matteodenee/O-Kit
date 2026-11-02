@@ -84,7 +84,7 @@ class ApiGatewayApplicationTest {
     @Test
     void rejectsAnonymousApiRequest() {
         webTestClient.get()
-                .uri("/api/users/me")
+                .uri("/api/v1/users/me")
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
@@ -101,33 +101,33 @@ class ApiGatewayApplicationTest {
         when(jwtDecoder.decode("test-token")).thenReturn(Mono.just(jwt));
 
         webTestClient.get()
-                .uri("/api/users/me")
+                .uri("/api/v1/users/me")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.subject").isEqualTo("subject-123");
 
-        assertThat(FORWARDED_PATH.get()).isEqualTo("/api/users/me");
+        assertThat(FORWARDED_PATH.get()).isEqualTo("/api/v1/users/me");
         assertThat(FORWARDED_AUTHORIZATION.get()).isEqualTo("Bearer test-token");
     }
 
     @Test
     void handlesConfiguredCorsPreflightAtTheGateway() {
         webTestClient.method(HttpMethod.OPTIONS)
-                .uri("/api/users/me")
-                .header(HttpHeaders.ORIGIN, "http://localhost:8081")
+                .uri("/api/v1/users/me")
+                .header(HttpHeaders.ORIGIN, "http://localhost:19006")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization")
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:8081");
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:19006");
     }
 
     @Test
     void rejectsUnknownCorsOrigin() {
         webTestClient.method(HttpMethod.OPTIONS)
-                .uri("/api/users/me")
+                .uri("/api/v1/users/me")
                 .header(HttpHeaders.ORIGIN, "https://untrusted.example")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
                 .exchange()
@@ -152,6 +152,6 @@ class ApiGatewayApplicationTest {
         assertThat(userRoute.getPredicates())
                 .singleElement()
                 .satisfies(predicate -> assertThat(predicate.getArgs())
-                        .containsValue("/api/users/**"));
+                        .containsValue("/api/v1/users/**"));
     }
 }

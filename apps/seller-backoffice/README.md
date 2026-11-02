@@ -55,5 +55,5 @@ Depuis la racine du dépôt, le parcours Keycloak vendeur peut être validé par
 set -a
 source .env
 set +a
-./services/user-service/scripts/test-local-seller-flow.sh
+./backend/ms-utilisateur/scripts/test-local-seller-flow.sh
 ```

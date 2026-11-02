@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: polytech-dams5-07
 resources:
   - ../../../keycloak
-  - ../../user-service
+  - ../../../../k8s/services/ms-utilisateur
   - ../../gateway
 images:
   - name: registry.example.invalid/okit/keycloak

@@ -49,10 +49,10 @@ Depuis la racine du dépôt :
 docker compose up -d keycloak
 ```
 
-La console d'administration est ensuite accessible à l'adresse `http://localhost:8080/admin/`. Le document de découverte OIDC du realm est exposé à l'adresse suivante :
+La console d'administration est ensuite accessible à l'adresse `http://localhost:8090/admin/`. Le document de découverte OIDC du realm est exposé à l'adresse suivante :
 
 ```text
-http://localhost:8080/realms/okit/.well-known/openid-configuration
+http://localhost:8090/realms/okit/.well-known/openid-configuration
 ```
 
 Vérifier les journaux si le service ne démarre pas :
@@ -85,7 +85,7 @@ Cette suppression est destructive pour les comptes de développement créés loc
 | Flux | Authorization Code |
 | PKCE | S256 obligatoire |
 | URI native | `okit://auth` |
-| URI web | `http://localhost:8081` |
+| URI web | `http://localhost:19006` |
 | Scopes attendus | `openid profile email` |
 
 Le client mobile et `user-service` exigent exclusivement le rôle `BUYER`. Les
@@ -122,7 +122,7 @@ masque le lien d'inscription publique pour ce client uniquement. Le lien
 
 ## Accès depuis Android ou un appareil physique
 
-L'adresse `localhost:8080` fonctionne uniquement depuis la machine qui exécute Keycloak. Depuis un émulateur Android, l'hôte de développement est généralement accessible avec `10.0.2.2`. Depuis un appareil physique, il faut utiliser une adresse réseau ou un domaine de développement accessible par l'appareil.
+L'adresse `localhost:8090` fonctionne uniquement depuis la machine qui exécute Keycloak. Depuis un émulateur Android, l'hôte de développement est généralement accessible avec `10.0.2.2`. Depuis un appareil physique, il faut utiliser une adresse réseau ou un domaine de développement accessible par l'appareil.
 
 Le port du conteneur est actuellement lié à `127.0.0.1` afin de ne pas exposer involontairement Keycloak sur le réseau local. Toute ouverture réseau doit être volontaire et documentée avant de modifier `compose.yaml`.
 
@@ -210,8 +210,8 @@ La procédure détaillée et les contrôles attendus sont décrits dans
 - le fournisseur SMTP de l'environnement déployé doit encore être choisi et
   configuré par l'équipe en charge du déploiement ;
 - la validation de l'adresse e-mail est désactivée en développement ;
-- l'aperçu web local dépend de Keycloak sur `8080`, d'Expo sur `8081` et de la
-  gateway sur `8083` ; `user-service` reste exposé sur `8082` uniquement pour
+- l'aperçu web local dépend de Keycloak sur `8090`, d'Expo sur `19006` et de la
+  gateway sur `8080` ; `user-service` reste exposé sur `8081` uniquement pour
   le diagnostic local ;
 - le backoffice vendeur local utilise `http://localhost:5173`.
 

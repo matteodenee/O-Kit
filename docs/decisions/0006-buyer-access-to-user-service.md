@@ -23,7 +23,7 @@ dans `user-service`.
 - l'inscription publique attribue uniquement `BUYER` ;
 - les comptes vendeurs sont créés et gérés par un administrateur Keycloak, qui
   retire le rôle hérité `BUYER` puis attribue `SELLER` ;
-- toutes les routes `/api/users/**` exigent un JWT valide portant `BUYER` et ne
+- toutes les routes `/api/v1/users/**` exigent un JWT valide portant `BUYER` et ne
   portant pas `SELLER` ;
 - le rôle est lu depuis `realm_access.roles` et converti en autorité Spring
   `ROLE_BUYER` ;

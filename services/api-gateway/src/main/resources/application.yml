@@ -9,8 +9,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8080/realms/okit}
-          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8080/realms/okit/protocol/openid-connect/certs}
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8090/realms/okit}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8090/realms/okit/protocol/openid-connect/certs}
   cloud:
     gateway:
       server:
@@ -19,15 +19,15 @@ spring:
             enabled: true
           routes:
             - id: user-service
-              uri: ${USER_SERVICE_URL:http://localhost:8082}
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
               predicates:
-                - Path=/api/users/**
+                - Path=/api/v1/users/**
           globalcors:
             add-to-simple-url-handler-mapping: true
             cors-configurations:
               '[/**]':
                 allowed-origins:
-                  - ${CORS_ALLOWED_ORIGIN:http://localhost:8081}
+                  - ${CORS_ALLOWED_ORIGIN:http://localhost:19006}
                 allowed-methods:
                   - GET
                   - PUT

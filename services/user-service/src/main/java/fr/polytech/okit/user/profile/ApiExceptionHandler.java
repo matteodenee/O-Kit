@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.URI;
 
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = UserProfileController.class)
 public class ApiExceptionHandler {
 
     @ExceptionHandler(UserProfileNotFoundException.class)

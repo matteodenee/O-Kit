@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: O'kit User Service API
-  version: 0.1.0
-  description: API du profil métier de l'acheteur authentifié. Le rôle realm Keycloak BUYER est obligatoire.
+  version: 0.2.0
+  description: API du profil métier et des adresses de l'acheteur authentifié. Le rôle realm Keycloak BUYER est obligatoire.
 servers:
   - url: http://localhost:8082
     description: Développement local direct
@@ -62,6 +62,137 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /api/users/me/addresses:
+    get:
+      operationId: listCurrentUserAddresses
+      summary: Lister les adresses actives de l'utilisateur authentifié
+      responses:
+        "200":
+          description: Adresses actives, avec l'adresse par défaut en premier
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAddress"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createCurrentUserAddress
+      summary: Créer une adresse pour l'utilisateur authentifié
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveUserAddress"
+      responses:
+        "201":
+          description: Adresse créée
+          headers:
+            Location:
+              description: URI de l'adresse créée
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Le profil métier doit être créé avant l'adresse ou une création concurrente est en conflit
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/users/me/addresses/{addressId}:
+    parameters:
+      - $ref: "#/components/parameters/AddressId"
+    get:
+      operationId: getCurrentUserAddress
+      summary: Consulter une adresse active de l'utilisateur authentifié
+      responses:
+        "200":
+          description: Adresse trouvée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/AddressNotFound"
+    put:
+      operationId: updateCurrentUserAddress
+      summary: Remplacer une adresse active de l'utilisateur authentifié
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveUserAddress"
+      responses:
+        "200":
+          description: Adresse mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/AddressNotFound"
+        "409":
+          $ref: "#/components/responses/AddressConflict"
+    delete:
+      operationId: archiveCurrentUserAddress
+      summary: Masquer une adresse de l'utilisateur authentifié
+      responses:
+        "204":
+          description: Adresse masquée
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/AddressNotFound"
+        "409":
+          description: Une autre adresse doit être choisie par défaut avant de masquer celle-ci
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/users/me/addresses/{addressId}/default:
+    parameters:
+      - $ref: "#/components/parameters/AddressId"
+    put:
+      operationId: setCurrentUserDefaultAddress
+      summary: Définir une adresse active comme adresse par défaut
+      responses:
+        "204":
+          description: Adresse définie par défaut
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/AddressNotFound"
+        "409":
+          $ref: "#/components/responses/AddressConflict"
 components:
   securitySchemes:
     bearerAuth:
@@ -69,10 +200,37 @@ components:
       scheme: bearer
       bearerFormat: JWT
   responses:
+    BadRequest:
+      description: Corps de requête ou données invalides
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
     Unauthorized:
       description: Token absent, expiré ou invalide
     Forbidden:
       description: Le token ne porte pas exclusivement le rôle BUYER ou porte également SELLER
+    AddressNotFound:
+      description: Adresse inexistante, masquée ou appartenant à un autre utilisateur
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    AddressConflict:
+      description: Une modification concurrente empêche l'opération sur l'adresse
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  parameters:
+    AddressId:
+      name: addressId
+      in: path
+      required: true
+      description: Identifiant de l'adresse appartenant à l'utilisateur courant
+      schema:
+        type: string
+        format: uuid
   schemas:
     UpdateUserProfile:
       type: object
@@ -120,6 +278,82 @@ components:
                 - string
                 - "null"
               format: email
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    SaveUserAddress:
+      type: object
+      additionalProperties: false
+      required:
+        - recipientFirstName
+        - recipientLastName
+        - phoneNumber
+        - addressLine1
+        - city
+        - countryCode
+      properties:
+        label:
+          type:
+            - string
+            - "null"
+          maxLength: 80
+        recipientFirstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        recipientLastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phoneNumber:
+          type: string
+          minLength: 3
+          maxLength: 32
+          pattern: "^[0-9+(). -]+$"
+        addressLine1:
+          type: string
+          minLength: 1
+          maxLength: 200
+        addressLine2:
+          type:
+            - string
+            - "null"
+          maxLength: 200
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+        region:
+          type:
+            - string
+            - "null"
+          maxLength: 100
+        postalCode:
+          type:
+            - string
+            - "null"
+          maxLength: 32
+        countryCode:
+          type: string
+          pattern: "^[A-Z]{2}$"
+    UserAddress:
+      allOf:
+        - $ref: "#/components/schemas/SaveUserAddress"
+        - type: object
+          required:
+            - id
+            - defaultAddress
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: string
+              format: uuid
+            defaultAddress:
+              type: boolean
             createdAt:
               type: string
               format: date-time

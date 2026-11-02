@@ -10,7 +10,8 @@ Le client React Native avec aperçu Expo Web permet à un acheteur de :
 4. consulter son profil métier ;
 5. compléter ou modifier son prénom, son nom, son téléphone et sa date de
    naissance ;
-6. enregistrer ces informations dans `user-service`.
+6. enregistrer ces informations dans `user-service` ;
+7. gérer ses adresses de livraison actives et son adresse par défaut.
 
 Le rôle realm Keycloak `BUYER` est obligatoire. Un compte ne portant pas ce
 rôle est refusé par le client.
@@ -29,7 +30,8 @@ Keycloak reste propriétaire :
 - du lien avec le claim `sub` Keycloak ;
 - du prénom et du nom utilisés par le domaine métier ;
 - du téléphone ;
-- de la date de naissance facultative.
+- de la date de naissance facultative ;
+- des adresses de livraison sauvegardées et de leur état actif ou masqué.
 
 L'e-mail affiché par l'API provient du JWT courant et n'est pas dupliqué dans la
 table `user_profiles`.
@@ -71,6 +73,23 @@ table `user_profiles`.
 - sur Android et iOS, les tokens sont conservés dans SecureStore ; pour
   l'aperçu web, ils restent limités à `sessionStorage` et disparaissent à la
   fermeture de l'onglet.
+
+### Gestion des adresses
+
+- l'accès à l'écran d'adresses est proposé après l'enregistrement du profil ;
+- l'écran liste uniquement les adresses actives, avec celle par défaut en
+  premier ;
+- une liste vide propose directement la création de la première adresse ;
+- le même formulaire sert à créer ou modifier une adresse internationale ;
+- le code pays utilise deux lettres ISO majuscules ;
+- la première adresse créée devient automatiquement celle par défaut ;
+- une action explicite permet de choisir une autre adresse par défaut ;
+- masquer une adresse demande confirmation ;
+- si l'adresse est celle par défaut et que d'autres adresses existent, le
+  client demande d'abord d'en sélectionner une nouvelle ;
+- une adresse masquée disparaît définitivement des interfaces clientes ;
+- les états de chargement, erreur et liste vide restent exploitables sur
+  mobile et dans l'aperçu web Expo.
 
 ## Environnements
 

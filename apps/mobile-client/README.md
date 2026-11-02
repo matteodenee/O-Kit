@@ -2,7 +2,7 @@
 
 Application Expo SDK 57 compatible Android, iOS et aperçu web. Keycloak gère
 l'inscription et la connexion avec Authorization Code et PKCE ; `user-service`
-conserve ensuite le profil métier.
+conserve ensuite le profil métier et ses adresses de livraison sauvegardées.
 
 ## Configuration locale
 
@@ -41,6 +41,11 @@ npm run web
 Ouvrir `http://localhost:8081`. Après connexion ou inscription, le formulaire
 appelle la gateway pour charger `GET /api/users/me`. Un profil absent peut être
 créé par le bouton « Enregistrer mon profil », qui appelle `PUT /api/users/me`.
+
+Une fois le profil créé, **Gérer mes adresses** ouvre la route Expo Router
+`/addresses`. Elle permet de créer et modifier une adresse internationale, de
+choisir l'adresse par défaut et de masquer une adresse après confirmation. Le
+même écran fonctionne sur Android, iOS et dans l'aperçu web.
 
 Le client renouvelle automatiquement l'access token avant expiration et retente
 une seule fois un appel ayant reçu `401`. Les sessions natives sont conservées

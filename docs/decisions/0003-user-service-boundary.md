@@ -36,10 +36,10 @@ L'e-mail retourné par l'API provient du JWT courant. Le service ne permet d'acc
 
 Les adresses de livraison et la wishlist sont envisagées comme de nouvelles
 tranches fonctionnelles autour du domaine utilisateur. La présente décision ne
-les attribue pas automatiquement à `user-service` : leur service propriétaire,
-leurs contrats et leurs dépendances interservices devront être décidés avant
-toute implémentation. La wishlist dépend notamment de l'identification des
-produits portée par le domaine catalogue.
+les attribuait pas automatiquement à `user-service`. La tranche adresses est
+désormais attribuée à ce service par l'[ADR 0008](0008-user-addresses.md). La
+wishlist reste en attente de l'identification des produits portée par le
+domaine catalogue.
 
 ## API initiale
 

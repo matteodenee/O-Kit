@@ -30,7 +30,9 @@ spring:
                   - ${CORS_ALLOWED_ORIGIN:http://localhost:8081}
                 allowed-methods:
                   - GET
+                  - POST
                   - PUT
+                  - DELETE
                   - OPTIONS
                 allowed-headers:
                   - Authorization

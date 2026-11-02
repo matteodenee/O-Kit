@@ -2,8 +2,8 @@
 
 O'Kit est une application de m-commerce. Le périmètre utilisateur livré couvre
 l'authentification centralisée par Keycloak, le profil métier acheteur dans
-`user-service`, l'application mobile Expo et l'authentification du backoffice
-vendeur.
+`user-service`, la gestion des adresses de livraison, l'application mobile Expo
+et l'authentification du backoffice vendeur.
 
 ## État du MVP utilisateur
 
@@ -18,11 +18,11 @@ Le MVP d'authentification et de profil de `user-service` est terminé :
 - le backoffice accepte exclusivement `SELLER` ;
 - un vendeur ne possède aucune donnée dans `user-service`.
 
-Les adresses de livraison et la wishlist sont envisagées comme de nouvelles
-tranches fonctionnelles autour du domaine utilisateur. Elles ne font pas partie
-du MVP actuel et leur service propriétaire doit être décidé avant leur
-implémentation. La wishlist dépendra notamment des identifiants définis par le
-domaine catalogue.
+La tranche adresses appartient également à `user-service` : un acheteur peut
+enregistrer plusieurs adresses internationales, choisir celle par défaut et
+masquer celles qu'il n'utilise plus depuis l'application Expo ou son aperçu
+web. La wishlist reste différée jusqu'à stabilisation des identifiants définis
+par le domaine catalogue.
 
 ## Architecture livrée
 
@@ -31,7 +31,7 @@ domaine catalogue.
 | Keycloak | Identités, rôles et parcours OIDC | `http://localhost:8080` |
 | Mailpit | Courriels de développement | `http://localhost:8025` |
 | PostgreSQL | Base propre à `user-service` | `localhost:5432` |
-| `user-service` | Profil métier acheteur | `http://localhost:8082` |
+| `user-service` | Profil et adresses de l'acheteur | `http://localhost:8082` |
 | `api-gateway` | Entrée des API | `http://localhost:8083` |
 | Client Expo | Application acheteur | `http://localhost:8081` |
 | Backoffice React | Authentification vendeur | `http://localhost:5173` |
@@ -119,6 +119,7 @@ SELLER, se trouve dans [`README_DEVELOPPEUR.md`](README_DEVELOPPEUR.md).
 - [Modèle de données](docs/architecture/user-service-data-model.md)
 - [Authentification Keycloak](docs/auth/keycloak.md)
 - [Parcours mobile](docs/mobile/auth-profile-flow.md)
+- [Gestion des adresses](docs/functional/user-addresses.md)
 - [Décisions d'architecture](docs/decisions/)
 
 Les fichiers `.env`, mots de passe, tokens, kubeconfigs et autres secrets ne

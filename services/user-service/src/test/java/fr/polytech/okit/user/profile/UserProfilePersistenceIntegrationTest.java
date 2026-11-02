@@ -1,5 +1,6 @@
 package fr.polytech.okit.user.profile;
 
+import fr.polytech.okit.user.address.UserAddressRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,9 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,10 +48,14 @@ class UserProfilePersistenceIntegrationTest {
     private UserProfileRepository repository;
 
     @Autowired
+    private UserAddressRepository addressRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearProfiles() {
+        addressRepository.deleteAll();
         repository.deleteAll();
     }
 
@@ -57,7 +64,7 @@ class UserProfilePersistenceIntegrationTest {
         Integer successfulMigrations = jdbcTemplate.queryForObject(
                 "select count(*) from flyway_schema_history where success = true",
                 Integer.class);
-        assertThat(successfulMigrations).isEqualTo(1);
+        assertThat(successfulMigrations).isEqualTo(2);
 
         mockMvc.perform(put("/api/users/me")
                         .with(jwt().jwt(token -> token
@@ -100,5 +107,114 @@ class UserProfilePersistenceIntegrationTest {
                                 .authorities(() -> "ROLE_BUYER")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.type").value("urn:problem:user-profile-not-found"));
+    }
+
+    @Test
+    void persistsDefaultsAndArchivesAddressesForBuyer() throws Exception {
+        String subject = "address-buyer";
+        createProfile(subject);
+
+        String firstAddressId = createAddress(subject, "Maison", "Lyon", true);
+        String secondAddressId = createAddress(subject, "Travail", "Paris", false);
+
+        mockMvc.perform(get("/api/users/me/addresses")
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(firstAddressId))
+                .andExpect(jsonPath("$[0].defaultAddress").value(true))
+                .andExpect(jsonPath("$[1].id").value(secondAddressId))
+                .andExpect(jsonPath("$[1].defaultAddress").value(false));
+
+        mockMvc.perform(put("/api/users/me/addresses/{addressId}/default", secondAddressId)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/users/me/addresses/{addressId}", secondAddressId)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type")
+                        .value("urn:problem:default-address-replacement-required"));
+
+        mockMvc.perform(delete("/api/users/me/addresses/{addressId}", firstAddressId)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(delete("/api/users/me/addresses/{addressId}", secondAddressId)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/users/me/addresses/{addressId}", secondAddressId)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNotFound());
+
+        assertThat(addressRepository.count()).isEqualTo(2);
+        assertThat(addressRepository
+                .findAllByUserProfileIdentitySubjectAndArchivedAtIsNullOrderByDefaultAddressDescCreatedAtAsc(subject))
+                .isEmpty();
+    }
+
+    @Test
+    void requiresProfileAndHidesAnotherBuyersAddress() throws Exception {
+        mockMvc.perform(post("/api/users/me/addresses")
+                        .with(buyerJwt("missing-profile"))
+                        .contentType("application/json")
+                        .content(addressRequest("Maison", "Lyon")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:problem:user-profile-required"));
+
+        createProfile("owner-subject");
+        String addressId = createAddress("owner-subject", "Maison", "Lyon", true);
+
+        mockMvc.perform(get("/api/users/me/addresses/{addressId}", addressId)
+                        .with(buyerJwt("other-subject")))
+                .andExpect(status().isNotFound());
+    }
+
+    private void createProfile(String subject) throws Exception {
+        mockMvc.perform(put("/api/users/me")
+                        .with(buyerJwt(subject))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "firstName": "Alice",
+                                  "lastName": "Martin",
+                                  "phoneNumber": "+33 6 12 34 56 78"
+                                }
+                                """))
+                .andExpect(status().isOk());
+    }
+
+    private String createAddress(String subject, String label, String city, boolean expectedDefault) throws Exception {
+        String response = mockMvc.perform(post("/api/users/me/addresses")
+                        .with(buyerJwt(subject))
+                        .contentType("application/json")
+                        .content(addressRequest(label, city)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.defaultAddress").value(expectedDefault))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return com.jayway.jsonpath.JsonPath.read(response, "$.id");
+    }
+
+    private static String addressRequest(String label, String city) {
+        return """
+                {
+                  "label": "%s",
+                  "recipientFirstName": "Alice",
+                  "recipientLastName": "Martin",
+                  "phoneNumber": "+33 6 12 34 56 78",
+                  "addressLine1": "12 rue des Sports",
+                  "city": "%s",
+                  "postalCode": "69000",
+                  "countryCode": "FR"
+                }
+                """.formatted(label, city);
+    }
+
+    private static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor buyerJwt(
+            String subject) {
+        return jwt().jwt(token -> token.subject(subject))
+                .authorities(() -> "ROLE_BUYER");
     }
 }

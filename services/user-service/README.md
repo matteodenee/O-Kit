@@ -1,8 +1,8 @@
 # O'kit user-service
 
-`user-service` conserve le profil métier de l'acheteur authentifié. Keycloak
-reste propriétaire de l'identité, de l'e-mail, du mot de passe, des sessions
-et des rôles.
+`user-service` conserve le profil métier et les adresses sauvegardées de
+l'acheteur authentifié. Keycloak reste propriétaire de l'identité, de l'e-mail,
+du mot de passe, des sessions et des rôles.
 
 Les routes `/api/users/**` exigent un JWT valide portant le rôle realm
 `BUYER`. Le service ne permet d'accéder qu'au profil associé au claim `sub` du
@@ -13,16 +13,19 @@ token courant.
 - consulter son profil avec `GET /api/users/me` ;
 - créer ou remplacer son profil avec `PUT /api/users/me` ;
 - conserver le prénom, le nom, le téléphone et la date de naissance ;
+- créer, consulter et modifier plusieurs adresses sous
+  `/api/users/me/addresses` ;
+- choisir une seule adresse active par défaut ;
+- masquer logiquement une adresse devenue inutile ;
 - exécuter les migrations PostgreSQL avec Flyway ;
 - exposer `/health` et `/metrics` pour l'exploitation.
 
 Le contrat complet se trouve dans
 [`docs/api/user-service.openapi.yaml`](../../docs/api/user-service.openapi.yaml).
 
-Ce périmètre constitue le MVP complet d'authentification et de profil. Les
-adresses de livraison et la wishlist sont envisagées pour de nouvelles tranches
-fonctionnelles, mais leur rattachement éventuel à `user-service` nécessite une
-décision d'architecture et des contrats dédiés. Aucune donnée vendeur ne sera
+Les adresses appartiennent à `user-service` conformément à l'ADR 0008. Une
+future commande conservera un instantané de livraison sans lire cette base. La
+wishlist attend encore le contrat catalogue. Aucune donnée vendeur n'est
 stockée dans ce service.
 
 ## Prérequis
@@ -102,9 +105,11 @@ Ouvrir `http://localhost:8081`, puis vérifier le scénario suivant :
 3. revenir dans l'application ;
 4. renseigner prénom, nom, téléphone et éventuellement date de naissance ;
 5. cliquer sur **Enregistrer mon profil** ;
-6. recharger la page et vérifier que les informations sont relues depuis
-   PostgreSQL ;
-7. se déconnecter puis se reconnecter avec le même compte.
+6. ouvrir **Gérer mes adresses** et créer deux adresses ;
+7. choisir la seconde par défaut, puis masquer la première ;
+8. recharger la page et vérifier que le profil et l'adresse active sont relus
+   depuis PostgreSQL ;
+9. se déconnecter puis se reconnecter avec le même compte.
 
 Une inscription publique doit recevoir le rôle `BUYER`. Un compte sans ce rôle
 doit être refusé par le client et recevoir `403 Forbidden` sur l'API
@@ -254,5 +259,7 @@ Le Service Kubernetes reste interne au cluster : Spring Cloud Gateway publie
 - [Contrat OpenAPI](../../docs/api/user-service.openapi.yaml)
 - [Modèle de données](../../docs/architecture/user-service-data-model.md)
 - [Parcours mobile et profil](../../docs/mobile/auth-profile-flow.md)
+- [Spécification fonctionnelle des adresses](../../docs/functional/user-addresses.md)
+- [ADR des adresses](../../docs/decisions/0008-user-addresses.md)
 - [Configuration Keycloak](../../docs/auth/keycloak.md)
 - [Déploiement Kubernetes](../../docs/devops/user-service-kubernetes.md)

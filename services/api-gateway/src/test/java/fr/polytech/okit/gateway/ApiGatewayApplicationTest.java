@@ -113,15 +113,17 @@ class ApiGatewayApplicationTest {
     }
 
     @Test
-    void handlesConfiguredCorsPreflightAtTheGateway() {
+    void handlesConfiguredAddressCrudCorsPreflightAtTheGateway() {
         webTestClient.method(HttpMethod.OPTIONS)
-                .uri("/api/users/me")
+                .uri("/api/users/me/addresses/address-id")
                 .header(HttpHeaders.ORIGIN, "http://localhost:8081")
-                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "DELETE")
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization")
                 .exchange()
                 .expectStatus().isOk()
-                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:8081");
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:8081")
+                .expectHeader().value(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
+                        value -> assertThat(value).contains("DELETE"));
     }
 
     @Test

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -316,6 +317,17 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
       >
         <Text style={styles.primaryButtonText}>Enregistrer mon profil</Text>
       </Pressable>
+
+      {profile ? (
+        <Link asChild href="/addresses">
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+          >
+            <Text style={styles.secondaryButtonText}>Gérer mes adresses</Text>
+          </Pressable>
+        </Link>
+      ) : null}
 
       <Text style={styles.dataNote}>
         Ton e-mail et ton mot de passe restent gérés par Keycloak. Le service utilisateur

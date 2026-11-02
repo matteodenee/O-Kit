@@ -6,9 +6,9 @@ depuis le dépôt `O-Kit`, sauf indication contraire.
 
 ## 1. Périmètre validé
 
-`user-service` est propriétaire uniquement du profil métier acheteur : prénom,
-nom, téléphone et date de naissance facultative. Il ne possède ni credentials,
-ni e-mail persistant, ni rôle, ni donnée vendeur.
+`user-service` est propriétaire du profil métier acheteur et de ses adresses de
+livraison sauvegardées. Il ne possède ni credentials, ni e-mail persistant, ni
+rôle, ni donnée vendeur.
 
 Keycloak possède les comptes et les rôles :
 
@@ -17,11 +17,9 @@ Keycloak possède les comptes et les rôles :
 - un compte portant `SELLER`, ou simultanément `BUYER` et `SELLER`, reçoit
   `403 Forbidden` sur `user-service`.
 
-Le MVP actuel ne contient ni adresse de livraison ni wishlist. Ces deux
-fonctionnalités sont envisagées pour des tranches ultérieures, mais leur
-service propriétaire et leurs contrats interservices doivent être décidés
-avant tout développement. La wishlist attend en particulier le contrat
-d'identification des produits du catalogue.
+Les adresses internationales sont gérées dans une table dédiée, avec une seule
+adresse active par défaut et un archivage logique. La wishlist reste différée
+jusqu'à la définition du contrat d'identification des produits du catalogue.
 
 ## 2. Prérequis
 
@@ -42,8 +40,8 @@ Pour les vérifications complètes :
 git clone git@gitlab.com:iwa-group2/o-kit.git
 cd o-kit
 git fetch origin
-git switch feature/auth-login
-git pull --ff-only origin feature/auth-login
+git switch feature/user-addresses
+git pull --ff-only origin feature/user-addresses
 ```
 
 Vérifier que le dépôt est propre avant de commencer :
@@ -162,10 +160,16 @@ Ouvrir `http://localhost:8081`, puis :
 1. créer un compte ;
 2. vérifier le retour automatique depuis Keycloak ;
 3. enregistrer le profil ;
-4. recharger la page ;
-5. se déconnecter et se reconnecter.
+4. ouvrir **Gérer mes adresses** ;
+5. ajouter une première adresse et vérifier qu'elle est définie par défaut ;
+6. ajouter une seconde adresse, la choisir par défaut, puis masquer la première ;
+7. recharger la page ;
+8. se déconnecter et se reconnecter.
 
-Le profil doit être relu depuis PostgreSQL après rechargement et reconnexion.
+Le profil et les adresses actives doivent être relus depuis PostgreSQL après
+rechargement et reconnexion. Pour masquer l'adresse par défaut lorsqu'une autre
+adresse existe, choisir d'abord cette autre adresse comme nouvelle valeur par
+défaut.
 
 ## 10. Application acheteur sur Android
 
@@ -320,5 +324,7 @@ restaurer dans `.env` la valeur utilisée lors de la création du volume.
 - [`docs/architecture/user-service-data-model.md`](docs/architecture/user-service-data-model.md)
 - [`docs/auth/keycloak.md`](docs/auth/keycloak.md)
 - [`docs/mobile/auth-profile-flow.md`](docs/mobile/auth-profile-flow.md)
+- [`docs/functional/user-addresses.md`](docs/functional/user-addresses.md)
 - [`docs/decisions/0003-user-service-boundary.md`](docs/decisions/0003-user-service-boundary.md)
 - [`docs/decisions/0006-buyer-access-to-user-service.md`](docs/decisions/0006-buyer-access-to-user-service.md)
+- [`docs/decisions/0008-user-addresses.md`](docs/decisions/0008-user-addresses.md)

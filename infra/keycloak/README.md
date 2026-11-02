@@ -18,10 +18,16 @@ Remplacer dans `kustomization.yaml` la valeur volontairement invalide
 par la chaîne CI.
 
 L'image embarque le thème `okit-seller`, sélectionné par le client
-`okit-seller-web` pour masquer l'inscription publique. Le realm conserve la
-réinitialisation du mot de passe, mais l'environnement Kubernetes doit fournir
-un serveur SMTP réel et ses identifiants via Secret avant la recette de ce
-parcours. Mailpit reste exclusivement local à Docker Compose.
+`okit-seller-web` pour masquer l'inscription publique. Elle embarque aussi le
+mapper O'kit qui ajoute `okit_direct_realm_roles` aux tokens vendeur afin de
+distinguer les rôles métier directement attribués des rôles hérités de
+`default-roles-okit`. La version du mapper est liée à la version Keycloak de
+l'image et doit être recompilée et testée lors d'une mise à niveau Keycloak.
+
+Le realm conserve la réinitialisation du mot de passe, mais l'environnement
+Kubernetes doit fournir un serveur SMTP réel et ses identifiants via Secret
+avant la recette de ce parcours. Mailpit reste exclusivement local à Docker
+Compose.
 
 ## Création initiale du Secret
 

@@ -104,8 +104,10 @@ assert_exclusive_seller_token() {
       const encoded = token.trim().split(".")[1];
       if (!encoded) process.exit(1);
       const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-      const roles = payload.realm_access?.roles ?? [];
-      if (!roles.includes("SELLER") || roles.includes("BUYER") || !payload.sub) process.exit(1);
+      const effectiveRoles = payload.realm_access?.roles ?? [];
+      const directRoles = payload.okit_direct_realm_roles ?? [];
+      if (!effectiveRoles.includes("SELLER") || !effectiveRoles.includes("BUYER") ||
+          !directRoles.includes("SELLER") || directRoles.includes("BUYER") || !payload.sub) process.exit(1);
       process.stdout.write(payload.sub);
     });
   '
@@ -117,7 +119,7 @@ echo '[seller-e2e] checking local services'
 curl --silent --show-error --fail "$KEYCLOAK_URL/realms/okit/.well-known/openid-configuration" >/dev/null
 curl --silent --show-error --fail "$API_URL/health" >/dev/null
 
-echo '[seller-e2e] creating an exclusive seller through the admin workflow'
+echo '[seller-e2e] creating a directly assigned seller through the admin workflow'
 SELLER_EMAIL="$TEST_USERNAME" \
 SELLER_TEMPORARY_PASSWORD="$TEST_PASSWORD" \
 SELLER_PASSWORD_TEMPORARY=false \
@@ -195,7 +197,10 @@ if [ "$profile_status" != 403 ]; then
 fi
 
 profile_count=$(printf "SELECT count(*) FROM user_profiles WHERE identity_subject = '%s';\n" "$USER_SUBJECT" |
-  docker compose exec -T postgres psql --username "$USER_DB_USERNAME" --dbname "$USER_DB_NAME" --tuples-only --no-align)
+  docker compose exec -T postgres psql \
+    --username "$USER_DB_USERNAME" \
+    --dbname "$USER_DB_NAME" \
+    --tuples-only --no-align)
 if [ "$profile_count" != 0 ]; then
   echo 'A seller profile was unexpectedly stored in PostgreSQL.' >&2
   exit 1
@@ -224,4 +229,4 @@ curl --silent --show-error --fail \
   --data-urlencode "client_id=$CLIENT_ID" \
   --data-urlencode "refresh_token=$refreshed_refresh_token" >/dev/null
 
-echo 'Local seller flow succeeded: admin provisioning, PKCE login, exclusive SELLER role, buyer API refusal and token refresh.'
+echo 'Local seller flow succeeded: admin provisioning, PKCE login, direct SELLER claim, buyer API refusal and token refresh.'

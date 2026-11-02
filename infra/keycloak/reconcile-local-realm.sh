@@ -163,6 +163,19 @@ ensure_scope_mapping() {
   fi
 }
 
+ensure_direct_roles_mapper() {
+  mapped_client_uuid=$1
+  mapper_name=okit-direct-realm-roles
+  if ! kcadm get "clients/$mapped_client_uuid/protocol-mappers/models" -r "$REALM" \
+    --fields name --format csv --noquotes | grep -Fx "$mapper_name" >/dev/null; then
+    kcadm create "clients/$mapped_client_uuid/protocol-mappers/models" -r "$REALM" \
+      -s "name=$mapper_name" \
+      -s protocol=openid-connect \
+      -s protocolMapper=okit-direct-realm-roles-mapper \
+      -s consentRequired=false >/dev/null
+  fi
+}
+
 ensure_role "$BUYER_ROLE" "Acheteur autorisé à utiliser l'application mobile O'kit"
 ensure_role "$SELLER_ROLE" "Employé O'kit autorisé à utiliser le backoffice vendeur"
 
@@ -210,6 +223,8 @@ kcadm update "clients/$SELLER_CLIENT_UUID" -r "$REALM" \
   -s 'attributes."login_theme"=okit-seller' \
   -s 'defaultClientScopes=["basic","profile","email","roles","web-origins"]' \
   -s 'optionalClientScopes=["offline_access"]' >/dev/null
+
+ensure_direct_roles_mapper "$SELLER_CLIENT_UUID"
 
 DEFAULT_ROLE="default-roles-$REALM"
 if ! kcadm get-roles -r "$REALM" --rname "$DEFAULT_ROLE" \

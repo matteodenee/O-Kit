@@ -1,5 +1,7 @@
 import Keycloak from 'keycloak-js';
 
+import { hasSellerBackofficeAccess } from './roles';
+
 const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8090';
 const realm = import.meta.env.VITE_KEYCLOAK_REALM ?? 'okit';
 
@@ -10,7 +12,7 @@ export const keycloak = new Keycloak({
 });
 
 export function isExclusiveSeller() {
-  return keycloak.hasRealmRole('SELLER') && !keycloak.hasRealmRole('BUYER');
+  return hasSellerBackofficeAccess(keycloak.tokenParsed);
 }
 
 export function applicationUrl() {

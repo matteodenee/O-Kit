@@ -17,7 +17,8 @@ Le MVP d'authentification et de profil de `user-service` est terminé :
 - Keycloak reste propriétaire des comptes, mots de passe, e-mails, sessions et
   rôles ;
 - l'application mobile accepte exclusivement `BUYER` ;
-- le backoffice accepte exclusivement `SELLER` ;
+- le backoffice exige `SELLER` sans attribution directe de `BUYER` et ignore
+  les rôles techniques hérités de `default-roles-okit` ;
 - un vendeur ne possède aucune donnée dans `user-service`.
 
 Les adresses de livraison et la wishlist sont envisagées comme de nouvelles

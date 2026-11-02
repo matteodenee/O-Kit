@@ -111,6 +111,15 @@
       ],
       "optionalClientScopes": [
         "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "okit-direct-realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "okit-direct-realm-roles-mapper",
+          "consentRequired": false,
+          "config": {}
+        }
       ]
     }
   ],

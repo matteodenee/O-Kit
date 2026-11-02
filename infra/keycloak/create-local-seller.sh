@@ -56,7 +56,6 @@ set -eu
 KCADM=/opt/keycloak/bin/kcadm.sh
 CONFIG=$(mktemp)
 REALM=okit
-DEFAULT_ROLE="default-roles-$REALM"
 CREATED_USER_ID=
 
 cleanup() {
@@ -104,12 +103,6 @@ else
 fi
 
 if "$KCADM" get-roles --config "$CONFIG" -r "$REALM" --uid "$CREATED_USER_ID" \
-  --fields name --format csv --noquotes | grep -Fx "$DEFAULT_ROLE" >/dev/null; then
-  "$KCADM" remove-roles --config "$CONFIG" -r "$REALM" \
-    --uid "$CREATED_USER_ID" --rolename "$DEFAULT_ROLE" >/dev/null
-fi
-
-if "$KCADM" get-roles --config "$CONFIG" -r "$REALM" --uid "$CREATED_USER_ID" \
   --fields name --format csv --noquotes | grep -Fx BUYER >/dev/null; then
   "$KCADM" remove-roles --config "$CONFIG" -r "$REALM" \
     --uid "$CREATED_USER_ID" --rolename BUYER >/dev/null
@@ -118,14 +111,14 @@ fi
 "$KCADM" add-roles --config "$CONFIG" -r "$REALM" \
   --uid "$CREATED_USER_ID" --rolename SELLER >/dev/null
 
-effective_roles=$("$KCADM" get "users/$CREATED_USER_ID/role-mappings/realm/composite" \
-  --config "$CONFIG" -r "$REALM" --fields name --format csv --noquotes)
-printf '%s\n' "$effective_roles" | grep -Fx SELLER >/dev/null
-if printf '%s\n' "$effective_roles" | grep -Fx BUYER >/dev/null; then
-  echo 'The seller account still has BUYER after provisioning.' >&2
+direct_roles=$("$KCADM" get-roles --config "$CONFIG" -r "$REALM" --uid "$CREATED_USER_ID" \
+  --fields name --format csv --noquotes)
+printf '%s\n' "$direct_roles" | grep -Fx SELLER >/dev/null
+if printf '%s\n' "$direct_roles" | grep -Fx BUYER >/dev/null; then
+  echo 'The seller account still has BUYER directly assigned after provisioning.' >&2
   exit 1
 fi
 
 CREATED_USER_ID=
-echo "Seller account created for $OKIT_SELLER_EMAIL with the exclusive SELLER role."
+echo "Seller account created for $OKIT_SELLER_EMAIL with SELLER directly assigned."
 KEYCLOAK_SCRIPT

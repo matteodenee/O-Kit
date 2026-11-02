@@ -12,7 +12,8 @@ services:
     mem_limit: 128m
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0.5
+    build:
+      context: ./infra/keycloak
     command:
       - start-dev
       - --import-realm

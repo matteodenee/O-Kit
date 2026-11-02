@@ -17,10 +17,20 @@ Keycloak conserve l'identité, le mot de passe, les sessions et le rôle realm
 | Interface | Rôle obligatoire | Rôle entraînant un refus |
 | --- | --- | --- |
 | Application acheteur | `BUYER` | `SELLER` |
-| Backoffice React | `SELLER` | `BUYER` |
+| Backoffice React | `SELLER` attribué directement | `BUYER` attribué directement |
 
-Un compte portant simultanément les deux rôles est refusé par les deux
-interfaces et par l'API de profil acheteur.
+Un compte portant directement les deux rôles métier est refusé par les deux
+interfaces et par l'API de profil acheteur. Le rôle technique
+`default-roles-okit` reste attribué à tous les comptes. Comme il hérite de
+`BUYER` pour permettre l'inscription publique des acheteurs, le backoffice ne
+peut pas déduire le type de compte depuis les seuls rôles effectifs.
+
+Le client vendeur reçoit donc aussi le claim signé
+`okit_direct_realm_roles`, produit par l'extension Keycloak O'kit. Ce claim
+contient uniquement les rôles realm attribués directement à l'utilisateur,
+sans développer les composites. Le backoffice exige `SELLER` et refuse
+`BUYER` dans ce claim. Les API continuent de lire les rôles effectifs depuis
+`realm_access.roles` pour leurs autorisations propres.
 
 ## Gestion administrative des vendeurs
 
@@ -29,9 +39,9 @@ console d'administration Keycloak, un administrateur :
 
 1. crée l'utilisateur dans le realm `okit` ;
 2. définit un mot de passe temporaire ou l'action `UPDATE_PASSWORD` ;
-3. retire le mapping `default-roles-okit`, qui fournit `BUYER` par héritage ;
-4. attribue le rôle realm `SELLER` ;
-5. vérifie que les rôles effectifs ne contiennent plus `BUYER` ;
+3. conserve le mapping technique `default-roles-okit` ;
+4. attribue directement le rôle realm `SELLER` ;
+5. vérifie que `BUYER` n'est pas aussi attribué directement ;
 6. désactive ou supprime le compte lors du départ de l'employé.
 
 Le mot de passe vendeur n'est jamais ajouté au dépôt. L'inscription publique
@@ -74,10 +84,11 @@ Le client public `okit-seller-web` utilise :
 
 ## Critères d'acceptation
 
-- un compte exclusivement `SELLER` ouvre le backoffice ;
+- un compte avec `SELLER` directement attribué ouvre le backoffice tout en
+  conservant `default-roles-okit` ;
 - un compte `BUYER` est refusé par le backoffice ;
 - un vendeur est refusé par l'application et l'API de profil acheteur ;
-- un compte portant les deux rôles est refusé partout ;
+- un compte portant directement les deux rôles est refusé partout ;
 - une inscription publique ne peut pas obtenir `SELLER` ;
 - la connexion vendeur ne présente aucun lien d'inscription publique ;
 - un vendeur peut demander la réinitialisation de son mot de passe par e-mail ;

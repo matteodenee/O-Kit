@@ -112,9 +112,14 @@ L'étape d'implémentation mobile devra calculer l'URI de redirection avec Expo 
 | URI web | `http://localhost:5173/*` |
 | Scopes attendus | `openid profile email` |
 
-Le backoffice accepte exclusivement `SELLER`. Il ne propose aucune inscription
-vendeur et conserve ses tokens en mémoire uniquement. L'inscription générique
-du realm reste réservée aux acheteurs et ne fournit jamais `SELLER`.
+Le backoffice exige que `SELLER` soit attribué directement et que `BUYER` ne le
+soit pas. Cette décision utilise le claim signé `okit_direct_realm_roles`, ajouté
+au token du client vendeur par l'extension Keycloak O'kit. Le rôle technique
+`default-roles-okit` est conservé ; son héritage de `BUYER` pour l'inscription
+publique n'est pas confondu avec une attribution métier directe. Le backoffice
+ne propose aucune inscription vendeur et conserve ses tokens en mémoire
+uniquement. L'inscription générique du realm reste réservée aux acheteurs et ne
+fournit jamais `SELLER`.
 
 Le client vendeur sélectionne le thème de connexion `okit-seller`. Ce thème
 masque le lien d'inscription publique pour ce client uniquement. Le lien
@@ -122,9 +127,20 @@ masque le lien d'inscription publique pour ce client uniquement. Le lien
 
 ## Accès depuis Android ou un appareil physique
 
-L'adresse `localhost:8090` fonctionne uniquement depuis la machine qui exécute Keycloak. Depuis un émulateur Android, l'hôte de développement est généralement accessible avec `10.0.2.2`. Depuis un appareil physique, il faut utiliser une adresse réseau ou un domaine de développement accessible par l'appareil.
+L'adresse `localhost:8090` du téléphone est reliée au port du PC par
+`adb reverse tcp:8090 tcp:8090`. La gateway et Metro utilisent de la même façon
+les ports `8080` et `19006`. Cette configuration conserve un issuer OIDC unique
+et évite d'exposer le formulaire de connexion, les codes d'autorisation et les
+tokens sur le réseau Wi-Fi.
 
-Le port du conteneur est actuellement lié à `127.0.0.1` afin de ne pas exposer involontairement Keycloak sur le réseau local. Toute ouverture réseau doit être volontaire et documentée avant de modifier `compose.yaml`.
+Le port du conteneur reste lié à `127.0.0.1`. Remplacer seulement l'URL mobile
+par une adresse Wi-Fi ferait varier le claim `iss` et entraînerait le refus du
+JWT par la gateway ou `user-service`. Un futur mode LAN devra donc fournir un
+nom d'hôte commun, idéalement en HTTPS, et modifier atomiquement Keycloak, les
+resource servers et le client mobile.
+
+La procédure reproductible est décrite dans
+[`docs/devops/mobile-physical-device.md`](../devops/mobile-physical-device.md).
 
 ## Persistance et import
 
@@ -197,9 +213,9 @@ uniquement dans l'interface Keycloak.
 
 La création d'un vendeur est une opération administrative. Dans la console
 Keycloak du realm `okit`, l'administrateur crée l'utilisateur, lui impose si
-nécessaire un changement de mot de passe, retire `default-roles-okit` puis
-attribue `SELLER`. Il vérifie enfin que les rôles effectifs ne contiennent pas
-`BUYER`.
+nécessaire un changement de mot de passe, conserve `default-roles-okit` puis
+attribue directement `SELLER`. Il vérifie enfin que `BUYER` n'est pas aussi
+attribué directement.
 
 La procédure détaillée et les contrôles attendus sont décrits dans
 [`docs/seller/authentication-flow.md`](../seller/authentication-flow.md).

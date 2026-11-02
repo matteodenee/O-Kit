@@ -25,7 +25,9 @@ npm ci
 npm run dev
 ```
 
-Le backoffice est accessible sur `http://localhost:5173`.
+Le backoffice est accessible sur `http://localhost:5173` et utilise Keycloak
+sur `http://localhost:8090`. L'API Gateway reste exposée séparément sur
+`http://localhost:8080`.
 
 ## Authentification
 

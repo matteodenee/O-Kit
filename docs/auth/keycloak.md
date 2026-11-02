@@ -30,7 +30,7 @@ Le client ne possède pas de secret, car une application installée sur un appar
 ## Prérequis
 
 - Docker avec la commande `docker compose` ;
-- le port local `8080` disponible ;
+- le port local `8090` disponible ;
 - une copie locale du fichier d'environnement d'exemple.
 
 Créer le fichier local `.env` puis remplacer le mot de passe factice :

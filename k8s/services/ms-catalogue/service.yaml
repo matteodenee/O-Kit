@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-catalogue
+  namespace: polytech-dams5-07
+  labels:
+    app.kubernetes.io/name: ms-catalogue
+    app.kubernetes.io/instance: okit
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ms-catalogue
+    app.kubernetes.io/instance: okit
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082
+      protocol: TCP

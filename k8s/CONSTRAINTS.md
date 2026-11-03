@@ -64,9 +64,9 @@ ResourceQuota Summary:
 | 1 | Authentification | `keycloak` | ClusterIP | `8080` (`http`) |
 | 2 | Backoffice Web | `backoffice` | ClusterIP | `80` (`http`) |
 | 3 | Base de Données mutualisée | `postgres` | ClusterIP | `5432` (`postgres`) |
-| 4 | Microservice User | `ms-user` | ClusterIP | `3000` (`http`) |
+| 4 | Microservice User | `user-service` | ClusterIP | `8081` (`http`) |
 | 5 | Microservice Commande | `ms-commande` | ClusterIP | `3000` (`http`) |
-| 6 | Microservice Catalogue | `ms-catalogue` | ClusterIP | `3000` (`http`) |
+| 6 | Microservice Catalogue | `ms-catalogue` | ClusterIP | `8082` (`http`) |
 | 7 | Microservice Stock | `ms-stock` | ClusterIP | `3000` (`http`) |
 | 8 | Microservice Paiement | `ms-paiement` | ClusterIP | `3000` (`http`) |
 | 9 | Microservice Avis | `ms-avis` | ClusterIP | `3000` (`http`) |

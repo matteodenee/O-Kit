@@ -1,0 +1,103 @@
+openapi: 3.0.3
+info:
+  title: O'kit Catalogue API
+  version: 1.0.0
+  description: Contrat de lecture du catalogue utilisé par l'application acheteur.
+servers:
+  - url: /api/v1
+paths:
+  /products:
+    get:
+      summary: Lister les produits du catalogue
+      operationId: listProducts
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: statut
+          schema:
+            $ref: '#/components/schemas/ProductStatus'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+      responses:
+        '200':
+          description: Page de produits retournée avec succès.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '401':
+          description: Token absent, expiré ou invalide.
+        '5XX':
+          description: Catalogue temporairement indisponible.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ProductStatus:
+      type: string
+      enum: [ACTIF, DESACTIVE]
+    ProductSummary:
+      type: object
+      required:
+        - id
+        - titre
+        - prixHT
+        - prixTTC
+        - enStock
+        - statut
+      properties:
+        id:
+          type: integer
+          format: int64
+        titre:
+          type: string
+        prixHT:
+          type: number
+        prixTTC:
+          type: number
+        enStock:
+          type: boolean
+        nomMarque:
+          type: string
+          nullable: true
+        nomSaison:
+          type: string
+          nullable: true
+        nomEquipe:
+          type: string
+          nullable: true
+        statut:
+          $ref: '#/components/schemas/ProductStatus'
+    ProductPage:
+      type: object
+      required: [content, page, size, totalElements, totalPages, isLast]
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSummary'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        isLast:
+          type: boolean

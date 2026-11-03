@@ -33,6 +33,8 @@ class ApiGatewayApplicationTest {
 
     private static final AtomicReference<String> FORWARDED_PATH = new AtomicReference<>();
     private static final AtomicReference<String> FORWARDED_AUTHORIZATION = new AtomicReference<>();
+    private static final AtomicReference<String> CATALOGUE_FORWARDED_PATH = new AtomicReference<>();
+    private static final AtomicReference<String> CATALOGUE_FORWARDED_AUTHORIZATION = new AtomicReference<>();
     private static final DisposableServer USER_SERVICE = HttpServer.create()
             .host("127.0.0.1")
             .port(0)
@@ -44,15 +46,30 @@ class ApiGatewayApplicationTest {
                         .sendString(Mono.just("{\"subject\":\"subject-123\"}"));
             })
             .bindNow();
+    private static final DisposableServer CATALOGUE_SERVICE = HttpServer.create()
+            .host("127.0.0.1")
+            .port(0)
+            .handle((request, response) -> {
+                CATALOGUE_FORWARDED_PATH.set(request.uri());
+                CATALOGUE_FORWARDED_AUTHORIZATION.set(
+                        request.requestHeaders().get(HttpHeaderNames.AUTHORIZATION));
+                return response
+                        .header(HttpHeaderNames.CONTENT_TYPE, "application/json")
+                        .sendString(Mono.just("{\"content\":[],\"page\":0,\"size\":10,"
+                                + "\"totalElements\":0,\"totalPages\":0,\"isLast\":true}"));
+            })
+            .bindNow();
 
     @DynamicPropertySource
     static void gatewayProperties(DynamicPropertyRegistry registry) {
         registry.add("USER_SERVICE_URL", () -> "http://127.0.0.1:" + USER_SERVICE.port());
+        registry.add("CATALOGUE_SERVICE_URL", () -> "http://127.0.0.1:" + CATALOGUE_SERVICE.port());
     }
 
     @AfterAll
     static void stopUserService() {
         USER_SERVICE.disposeNow();
+        CATALOGUE_SERVICE.disposeNow();
     }
 
     @LocalServerPort
@@ -91,13 +108,7 @@ class ApiGatewayApplicationTest {
 
     @Test
     void forwardsAuthenticatedRequestWithOriginalPathAndBearerToken() {
-        Instant now = Instant.now();
-        Jwt jwt = Jwt.withTokenValue("test-token")
-                .header("alg", "RS256")
-                .subject("subject-123")
-                .issuedAt(now)
-                .expiresAt(now.plusSeconds(300))
-                .build();
+        Jwt jwt = buyerJwt();
         when(jwtDecoder.decode("test-token")).thenReturn(Mono.just(jwt));
 
         webTestClient.get()
@@ -110,6 +121,35 @@ class ApiGatewayApplicationTest {
 
         assertThat(FORWARDED_PATH.get()).isEqualTo("/api/v1/users/me");
         assertThat(FORWARDED_AUTHORIZATION.get()).isEqualTo("Bearer test-token");
+    }
+
+    @Test
+    void forwardsAuthenticatedCatalogueReadWithoutPathRewrite() {
+        when(jwtDecoder.decode("test-token")).thenReturn(Mono.just(buyerJwt()));
+
+        webTestClient.get()
+                .uri("/api/v1/products?statut=ACTIF")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.content").isArray();
+
+        assertThat(CATALOGUE_FORWARDED_PATH.get())
+                .isEqualTo("/api/v1/products?statut=ACTIF");
+        assertThat(CATALOGUE_FORWARDED_AUTHORIZATION.get())
+                .isEqualTo("Bearer test-token");
+    }
+
+    @Test
+    void doesNotExposeCatalogueWritesThroughTheBuyerRoute() {
+        when(jwtDecoder.decode("test-token")).thenReturn(Mono.just(buyerJwt()));
+
+        webTestClient.post()
+                .uri("/api/v1/products")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
+                .exchange()
+                .expectStatus().isNotFound();
     }
 
     @Test
@@ -155,5 +195,37 @@ class ApiGatewayApplicationTest {
                 .singleElement()
                 .satisfies(predicate -> assertThat(predicate.getArgs())
                         .containsValue("/api/v1/users/**"));
+    }
+
+    @Test
+    void declaresReadOnlyCatalogueRouteWithoutPathRewrite() {
+        List<RouteDefinition> routes = routeDefinitionLocator.getRouteDefinitions()
+                .collectList()
+                .block();
+
+        assertThat(routes).isNotNull();
+        RouteDefinition catalogueRoute = routes.stream()
+                .filter(route -> route.getId().equals("catalogue-service"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(catalogueRoute.getUri().toString())
+                .isEqualTo("http://127.0.0.1:" + CATALOGUE_SERVICE.port());
+        assertThat(catalogueRoute.getFilters()).isEmpty();
+        assertThat(catalogueRoute.getPredicates())
+                .anySatisfy(predicate -> assertThat(predicate.getArgs())
+                        .containsValue("/api/v1/products/**"))
+                .anySatisfy(predicate -> assertThat(predicate.getArgs())
+                        .containsValue("GET"));
+    }
+
+    private Jwt buyerJwt() {
+        Instant now = Instant.now();
+        return Jwt.withTokenValue("test-token")
+                .header("alg", "RS256")
+                .subject("subject-123")
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(300))
+                .build();
     }
 }

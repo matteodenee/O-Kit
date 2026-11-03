@@ -35,11 +35,17 @@ spec:
               protocol: TCP
           env:
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:postgresql://postgres:5432/catalogue_db
+              value: jdbc:postgresql://postgres:5432/okit_catalogue
             - name: SPRING_DATASOURCE_USERNAME
-              value: postgres
+              valueFrom:
+                secretKeyRef:
+                  name: catalogue-db-credentials
+                  key: username
             - name: SPRING_DATASOURCE_PASSWORD
-              value: postgres
+              valueFrom:
+                secretKeyRef:
+                  name: catalogue-db-credentials
+                  key: password
             - name: SPRING_JPA_HIBERNATE_DDL_AUTO
               value: update
             - name: MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED

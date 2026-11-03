@@ -11,7 +11,8 @@ Le client React Native avec aperçu Expo Web permet à un acheteur de :
 5. compléter ou modifier son prénom, son nom, son téléphone et sa date de
    naissance ;
 6. enregistrer ces informations dans `user-service` ;
-7. gérer ses adresses de livraison actives et son adresse par défaut.
+7. gérer ses adresses de livraison actives et son adresse par défaut ;
+8. consulter le catalogue après l'authentification.
 
 Le rôle realm Keycloak `BUYER` est obligatoire. Un compte ne portant pas ce
 rôle est refusé par le client.
@@ -55,6 +56,9 @@ table `user_profiles`.
 
 ### Utilisateur authentifié
 
+- la route d'accueil redirige par défaut vers `/catalogue` ;
+- le catalogue charge `GET /api/v1/products?statut=ACTIF` via la gateway ;
+- le profil et les adresses restent accessibles depuis la page Catalogue ;
 - le client refuse un token ne portant pas exclusivement `BUYER`, notamment un
   compte vendeur ou un compte mal provisionné avec `BUYER` et `SELLER` ;
 - avant chaque appel protégé, le client réutilise l'access token tant qu'il est

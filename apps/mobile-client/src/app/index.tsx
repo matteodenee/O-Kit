@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'expo-router';
+import { Link, Redirect, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   Pressable,
@@ -30,6 +30,7 @@ const emptyProfile: UserProfileInput = {
 type ProfileState = 'idle' | 'loading' | 'missing' | 'saved' | 'error';
 
 export default function HomeScreen() {
+  const { profile } = useLocalSearchParams<{ profile?: string }>();
   const { width } = useWindowDimensions();
   const {
     accessToken,
@@ -53,6 +54,10 @@ export default function HomeScreen() {
         <Text style={styles.muted}>Préparation de ton espace…</Text>
       </View>
     );
+  }
+
+  if (accessToken && profile !== '1') {
+    return <Redirect href="/catalogue" />;
   }
 
   return (

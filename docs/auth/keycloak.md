@@ -25,6 +25,12 @@ Le fichier `infra/keycloak/import/okit-realm.json` crée au premier démarrage :
 - le rôle realm `SELLER` ;
 - l'attribution de `BUYER` par défaut aux inscriptions publiques.
 
+Le profil utilisateur Keycloak limite l'inscription publique à l'e-mail et au
+mot de passe. Le prénom et le nom restent administrables pour les comptes
+vendeur créés par un administrateur, mais ils ne sont ni affichés ni demandés
+dans les parcours libre-service. Pour les acheteurs, `user-service` est la
+source de vérité de ces deux données métier.
+
 Le client ne possède pas de secret, car une application installée sur un appareil ne peut pas conserver un secret de manière fiable. Les flux implicite, Resource Owner Password Credentials et service account sont désactivés.
 
 ## Prérequis
@@ -207,7 +213,9 @@ dans le JSON du realm ou dans le dépôt.
 
 Le client ouvre l'endpoint d'inscription utilisateur Keycloak avec le même flux
 Authorization Code et PKCE que la connexion. Le mot de passe reste donc saisi
-uniquement dans l'interface Keycloak.
+uniquement dans l'interface Keycloak. Cette inscription demande seulement
+l'e-mail et le mot de passe ; le prénom et le nom sont saisis ensuite dans
+l'application et enregistrés dans `user-service`.
 
 ## Création d'un compte vendeur
 

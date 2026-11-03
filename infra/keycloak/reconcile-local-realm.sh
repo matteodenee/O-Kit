@@ -75,6 +75,7 @@ set -eu
 
 KCADM=/opt/keycloak/bin/kcadm.sh
 CONFIG=$(mktemp)
+USER_PROFILE_CONFIG=$(mktemp)
 SERVER_URL=http://127.0.0.1:8080
 REALM=okit
 BUYER_ROLE=BUYER
@@ -83,7 +84,7 @@ MOBILE_CLIENT_ID=okit-mobile
 SELLER_CLIENT_ID=okit-seller-web
 
 cleanup() {
-  rm -f "$CONFIG"
+  rm -f "$CONFIG" "$USER_PROFILE_CONFIG"
 }
 trap cleanup EXIT
 
@@ -124,6 +125,71 @@ kcadm update "realms/$REALM" \
   -s "smtpServer.ssl=$OKIT_SMTP_SSL" \
   -s "smtpServer.user=$OKIT_SMTP_USER" \
   -s "smtpServer.password=$OKIT_SMTP_PASSWORD" >/dev/null
+
+cat >"$USER_PROFILE_CONFIG" <<'USER_PROFILE_JSON'
+{
+  "unmanagedAttributePolicy": "ADMIN_EDIT",
+  "attributes": [
+    {
+      "name": "username",
+      "displayName": "${username}",
+      "validations": {
+        "length": { "min": 3, "max": 255 },
+        "username-prohibited-characters": {},
+        "up-username-not-idn-homograph": {}
+      },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "email",
+      "displayName": "${email}",
+      "validations": {
+        "email": {},
+        "length": { "max": 255 }
+      },
+      "required": { "roles": ["user"] },
+      "permissions": {
+        "view": ["admin", "user"],
+        "edit": ["admin", "user"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "firstName",
+      "displayName": "${firstName}",
+      "validations": {
+        "length": { "max": 255 },
+        "person-name-prohibited-characters": {}
+      },
+      "permissions": {
+        "view": ["admin"],
+        "edit": ["admin"]
+      },
+      "multivalued": false
+    },
+    {
+      "name": "lastName",
+      "displayName": "${lastName}",
+      "validations": {
+        "length": { "max": 255 },
+        "person-name-prohibited-characters": {}
+      },
+      "permissions": {
+        "view": ["admin"],
+        "edit": ["admin"]
+      },
+      "multivalued": false
+    }
+  ],
+  "groups": []
+}
+USER_PROFILE_JSON
+
+kcadm update users/profile -r "$REALM" -f "$USER_PROFILE_CONFIG" >/dev/null
 
 ensure_role() {
   role_name=$1
@@ -248,6 +314,7 @@ kcadm get "clients/$MOBILE_CLIENT_UUID" -r "$REALM" \
   --fields clientId,enabled,publicClient,standardFlowEnabled,directAccessGrantsEnabled,fullScopeAllowed >/dev/null
 kcadm get "clients/$SELLER_CLIENT_UUID" -r "$REALM" \
   --fields clientId,enabled,publicClient,standardFlowEnabled,directAccessGrantsEnabled,fullScopeAllowed >/dev/null
+kcadm get users/profile -r "$REALM" --fields unmanagedAttributePolicy,attributes >/dev/null
 
-echo "Realm '$REALM', roles '$BUYER_ROLE'/'$SELLER_ROLE' and clients '$MOBILE_CLIENT_ID'/'$SELLER_CLIENT_ID' reconciled successfully."
+echo "Realm '$REALM', user profile, roles '$BUYER_ROLE'/'$SELLER_ROLE' and clients '$MOBILE_CLIENT_ID'/'$SELLER_CLIENT_ID' reconciled successfully."
 KEYCLOAK_SCRIPT

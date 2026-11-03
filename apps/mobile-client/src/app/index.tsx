@@ -17,6 +17,7 @@ import {
   UserProfileInput,
 } from '../api/userProfile';
 import { useAuth } from '../auth/AuthProvider';
+import { BirthDateField } from '../components/BirthDateField';
 
 const emptyProfile: UserProfileInput = {
   firstName: '',
@@ -148,8 +149,6 @@ type AuthenticatedProfileProps = {
 function AuthenticatedProfile({ authenticatedFetch, logout, user }: AuthenticatedProfileProps) {
   const [form, setForm] = useState<UserProfileInput>({
     ...emptyProfile,
-    firstName: user?.given_name ?? '',
-    lastName: user?.family_name ?? '',
   });
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileState, setProfileState] = useState<ProfileState>('loading');
@@ -157,7 +156,7 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
 
   const displayName = useMemo(
     () =>
-      [profile?.firstName ?? user?.given_name, profile?.lastName ?? user?.family_name]
+      [profile?.firstName, profile?.lastName]
         .filter(Boolean)
         .join(' ') ||
       user?.preferred_username ||
@@ -214,12 +213,6 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
     if (!form.firstName.trim() || !form.lastName.trim() || !form.phoneNumber.trim()) {
       setProfileState('error');
       setProfileMessage('Prénom, nom et téléphone sont obligatoires.');
-      return;
-    }
-
-    if (form.birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(form.birthDate)) {
-      setProfileState('error');
-      setProfileMessage('La date de naissance doit respecter le format AAAA-MM-JJ.');
       return;
     }
 
@@ -289,11 +282,9 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
           placeholder="+33 6 12 34 56 78"
           value={form.phoneNumber}
         />
-        <Field
-          label="Date de naissance"
-          onChangeText={(value) => updateField('birthDate', value || null)}
-          placeholder="AAAA-MM-JJ"
-          value={form.birthDate ?? ''}
+        <BirthDateField
+          onChange={(value) => updateField('birthDate', value)}
+          value={form.birthDate}
         />
       </View>
 
@@ -318,8 +309,8 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
       </Pressable>
 
       <Text style={styles.dataNote}>
-        Ton e-mail et ton mot de passe restent gérés par Keycloak. Le service utilisateur
-        conserve uniquement les données utiles à ton profil O’kit.
+        Ton e-mail et ton mot de passe restent gérés par Keycloak. Ton nom, ton prénom
+        et les autres informations du profil sont conservés par le service utilisateur.
       </Text>
     </View>
   );

@@ -5,7 +5,7 @@
 Le client React Native avec aperçu Expo Web permet à un acheteur de :
 
 1. se connecter à un compte existant ;
-2. créer un compte dans Keycloak ;
+2. créer un compte technique dans Keycloak avec son e-mail et son mot de passe ;
 3. revenir dans l'application avec Authorization Code et PKCE S256 ;
 4. consulter son profil métier ;
 5. compléter ou modifier son prénom, son nom, son téléphone et sa date de
@@ -45,6 +45,8 @@ table `user_profiles`.
   passe propre à l'application ;
 - le client OIDC utilisé est `okit-mobile` sans secret ;
 - l'inscription publique reçoit le rôle `BUYER` par défaut ;
+- l'inscription Keycloak ne demande pas le prénom ni le nom : ces données sont
+  saisies une seule fois dans le profil métier O'kit après l'authentification ;
 - sur l'application native, Keycloak revient vers `okit://auth`. Expo Router
   associe ce deep link à la route `/auth`, qui redirige immédiatement vers
   l'accueil pendant que `expo-auth-session` valide la réponse et échange le
@@ -61,8 +63,11 @@ table `user_profiles`.
   token avec le refresh token, sans secret client ;
 - le client appelle `GET /api/v1/users/me` avec le bearer token ;
 - une réponse `200` préremplit le formulaire depuis la base métier ;
-- une réponse `404` affiche un formulaire vide, prérempli avec le prénom et le
-  nom disponibles dans Keycloak ;
+- une réponse `404` affiche un formulaire métier vide ;
+- la date de naissance facultative se choisit dans un calendrier natif sur
+  Android/iOS et dans le sélecteur de date du navigateur sur le web ;
+- le client convertit la date choisie au format ISO `AAAA-MM-JJ` attendu par
+  l'API, sans demander à l'utilisateur de saisir ce format ;
 - l'enregistrement appelle `PUT /api/v1/users/me` puis affiche les données
   retournées par le service ;
 - une réponse `401` déclenche un seul renouvellement suivi d'une seule nouvelle

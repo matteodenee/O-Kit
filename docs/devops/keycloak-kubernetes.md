@@ -7,6 +7,8 @@ Le socle `infra/keycloak` déploie :
 - Keycloak 26.0.5 en mode serveur ;
 - PostgreSQL comme stockage dédié et persistant ;
 - le realm `okit` depuis la configuration versionnée ;
+- le profil utilisateur Keycloak qui réserve le prénom et le nom aux usages
+  administratifs et les retire de l'inscription acheteur ;
 - les Services internes, probes et métriques ;
 - un Service interne consommé par la gateway d'entrée ;
 - une NetworkPolicy protégeant PostgreSQL.

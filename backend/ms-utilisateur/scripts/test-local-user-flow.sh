@@ -221,8 +221,6 @@ curl --silent --show-error \
   --dump-header "$registration_headers" \
   --output "$registration_result" \
   --request POST "$registration_action" \
-  --data-urlencode 'firstName=Alice' \
-  --data-urlencode 'lastName=Martin' \
   --data-urlencode "email=$TEST_USERNAME" \
   --data-urlencode "password=$TEST_PASSWORD" \
   --data-urlencode "password-confirm=$TEST_PASSWORD"

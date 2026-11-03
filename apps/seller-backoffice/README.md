@@ -1,8 +1,10 @@
 # O'kit seller backoffice
 
-SPA React et TypeScript réservée aux employés O'kit portant exclusivement le
-rôle realm Keycloak `SELLER`. Elle ne contient aucune fonctionnalité catalogue
-et ne stocke aucun profil vendeur dans `user-service`.
+SPA React et TypeScript réservée aux employés O'kit auxquels le rôle realm
+Keycloak `SELLER` est attribué directement, sans attribution directe de
+`BUYER`. Le mapping technique `default-roles-okit` est conservé. Elle ne
+contient aucune fonctionnalité catalogue et ne stocke aucun profil vendeur
+dans `user-service`.
 
 ## Démarrage local
 
@@ -25,14 +27,17 @@ npm ci
 npm run dev
 ```
 
-Le backoffice est accessible sur `http://localhost:5173`.
+Le backoffice est accessible sur `http://localhost:5173` et utilise Keycloak
+sur `http://localhost:8090`. L'API Gateway reste exposée séparément sur
+`http://localhost:8080`.
 
 ## Authentification
 
 - client public : `okit-seller-web` ;
 - flux : Authorization Code avec PKCE S256 ;
-- rôle obligatoire : `SELLER` ;
-- rôle incompatible : `BUYER` ;
+- rôle directement attribué obligatoire : `SELLER` ;
+- rôle directement attribué incompatible : `BUYER` ;
+- claim signé utilisé : `okit_direct_realm_roles` ;
 - création du compte : administration Keycloak uniquement ;
 - stockage des tokens : mémoire uniquement, géré par `keycloak-js`.
 
@@ -55,5 +60,5 @@ Depuis la racine du dépôt, le parcours Keycloak vendeur peut être validé par
 set -a
 source .env
 set +a
-./services/user-service/scripts/test-local-seller-flow.sh
+./backend/ms-utilisateur/scripts/test-local-seller-flow.sh
 ```

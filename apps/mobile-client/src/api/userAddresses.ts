@@ -69,7 +69,7 @@ async function parseAddress(response: Response): Promise<UserAddress> {
 }
 
 export async function listUserAddresses(authenticatedFetch: AuthenticatedFetch) {
-  const response = await authenticatedFetch(`${apiBaseUrl}/api/users/me/addresses`);
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/users/me/addresses`);
   if (!response.ok) {
     throw await toApiError(response, `Les adresses sont indisponibles (${response.status}).`);
   }
@@ -80,7 +80,7 @@ export async function createUserAddress(
   authenticatedFetch: AuthenticatedFetch,
   input: UserAddressInput
 ) {
-  const response = await authenticatedFetch(`${apiBaseUrl}/api/users/me/addresses`, {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/users/me/addresses`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
@@ -94,7 +94,7 @@ export async function updateUserAddress(
   input: UserAddressInput
 ) {
   const response = await authenticatedFetch(
-    `${apiBaseUrl}/api/users/me/addresses/${encodeURIComponent(addressId)}`,
+    `${apiBaseUrl}/api/v1/users/me/addresses/${encodeURIComponent(addressId)}`,
     {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -109,7 +109,7 @@ export async function setDefaultUserAddress(
   addressId: string
 ) {
   const response = await authenticatedFetch(
-    `${apiBaseUrl}/api/users/me/addresses/${encodeURIComponent(addressId)}/default`,
+    `${apiBaseUrl}/api/v1/users/me/addresses/${encodeURIComponent(addressId)}/default`,
     { method: 'PUT' }
   );
   if (!response.ok) {
@@ -122,7 +122,7 @@ export async function archiveUserAddress(
   addressId: string
 ) {
   const response = await authenticatedFetch(
-    `${apiBaseUrl}/api/users/me/addresses/${encodeURIComponent(addressId)}`,
+    `${apiBaseUrl}/api/v1/users/me/addresses/${encodeURIComponent(addressId)}`,
     { method: 'DELETE' }
   );
   if (!response.ok) {

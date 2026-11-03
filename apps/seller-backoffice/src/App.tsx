@@ -148,7 +148,7 @@ export default function App() {
             Se connecter avec Keycloak
           </button>
           <p className="fine-print">
-            Réservé aux comptes portant uniquement le rôle SELLER.
+            Réservé aux comptes auxquels le rôle SELLER est attribué directement.
           </p>
         </section>
       </main>
@@ -162,8 +162,9 @@ export default function App() {
           <p className="eyebrow">ACCÈS REFUSÉ</p>
           <h1>Ce compte n’est pas un compte vendeur.</h1>
           <p>
-            Le backoffice est réservé aux employés portant exclusivement le rôle
-            SELLER. Utilise l’application acheteur avec un compte BUYER.
+            Le backoffice est réservé aux employés portant directement le rôle
+            SELLER sans attribution directe de BUYER. Utilise l’application acheteur
+            avec un compte BUYER.
           </p>
           <button className="secondary-button" type="button" onClick={logout}>
             Se déconnecter

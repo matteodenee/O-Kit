@@ -24,7 +24,7 @@ complémentaires et ne se remplacent pas.
 - Une application `api-gateway` basée sur Spring Cloud Gateway Server WebFlux
   devient le point d'entrée de toutes les API métier sous `/api/**`.
 - L'Ingress route `/api/**` vers `api-gateway`.
-- `api-gateway` route `/api/users/**` vers le Service interne `user-service`
+- `api-gateway` route `/api/v1/users/**` vers le Service interne `user-service`
   sans réécrire le chemin.
 - `/realms` et `/resources` restent routés directement par Traefik vers
   Keycloak afin de publier les parcours OIDC sans les soumettre au filtre JWT
@@ -66,7 +66,7 @@ mais le service propriétaire des données conserve la validation finale.
 - une image et un Deployment supplémentaires sont nécessaires ;
 - la gateway devient un composant critique et doit disposer de deux réplicas,
   de probes, de limites de ressources et de métriques ;
-- toute nouvelle API publique nécessite une route explicite dans la gateway ;
+- toute nouvelle famille d'API publique nécessite une route explicite dans la gateway ;
 - le `user-service` n'est plus une destination directe de l'Ingress ;
 - les clients locaux appellent la gateway, et non directement les
   microservices ;

@@ -9,9 +9,9 @@ conserve ensuite le profil métier et ses adresses de livraison sauvegardées.
 Les valeurs par défaut correspondent à Docker Compose :
 
 ```text
-Keycloak    http://localhost:8080
-Expo Web   http://localhost:8081
-API Gateway http://localhost:8083
+Keycloak    http://localhost:8090
+Expo Web   http://localhost:19006
+API Gateway http://localhost:8080
 ```
 
 Pour surcharger les URL sans ajouter de secret :
@@ -22,6 +22,42 @@ cp .env.example .env.local
 
 Les variables `EXPO_PUBLIC_*` sont intégrées au bundle et ne doivent jamais
 contenir de secret.
+
+## Android physique avec un câble USB
+
+Le flux OIDC natif doit être testé avec le development build O'kit, et non avec
+Expo Go. Expo Go ne peut pas garantir le callback stable `okit://auth` déclaré
+dans Keycloak.
+
+Le mode recommandé conserve les URL `localhost` du fichier `.env.local` et les
+transporte vers le PC avec `adb reverse`. Il évite d'exposer Keycloak et la
+gateway sur le Wi-Fi et maintient le même issuer OIDC côté mobile et backend :
+
+```text
+EXPO_PUBLIC_KEYCLOAK_URL=http://localhost:8090
+EXPO_PUBLIC_API_URL=http://localhost:8080
+```
+
+Après avoir démarré Docker Compose depuis la racine du dépôt, brancher le
+téléphone avec le débogage USB activé puis lancer :
+
+```bash
+cd apps/mobile-client
+npm ci
+npm run start:android:usb
+```
+
+Cette commande vérifie l'issuer, PKCE S256, la santé de la gateway et la
+présence du development build `com.okit.mobile`. Elle crée ensuite les tunnels
+USB pour Keycloak (`8090`), la gateway (`8080`) et Metro (`19006`), puis ouvre
+le build O'kit installé. Pour la première installation seulement :
+
+```bash
+npm run android
+```
+
+La procédure complète et le diagnostic réseau se trouvent dans
+[`docs/devops/mobile-physical-device.md`](../../docs/devops/mobile-physical-device.md).
 
 ## Aperçu web
 
@@ -38,9 +74,9 @@ npm ci
 npm run web
 ```
 
-Ouvrir `http://localhost:8081`. Après connexion ou inscription, le formulaire
-appelle la gateway pour charger `GET /api/users/me`. Un profil absent peut être
-créé par le bouton « Enregistrer mon profil », qui appelle `PUT /api/users/me`.
+Ouvrir `http://localhost:19006`. Après connexion ou inscription, le formulaire
+appelle la gateway pour charger `GET /api/v1/users/me`. Un profil absent peut être
+créé par le bouton « Enregistrer mon profil », qui appelle `PUT /api/v1/users/me`.
 
 Une fois le profil créé, **Gérer mes adresses** ouvre la route Expo Router
 `/addresses`. Elle permet de créer et modifier une adresse internationale, de

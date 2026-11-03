@@ -59,11 +59,11 @@ table `user_profiles`.
   encore valable avec une marge de sécurité ;
 - à l'approche de l'expiration, le client renouvelle automatiquement l'access
   token avec le refresh token, sans secret client ;
-- le client appelle `GET /api/users/me` avec le bearer token ;
+- le client appelle `GET /api/v1/users/me` avec le bearer token ;
 - une réponse `200` préremplit le formulaire depuis la base métier ;
 - une réponse `404` affiche un formulaire vide, prérempli avec le prénom et le
   nom disponibles dans Keycloak ;
-- l'enregistrement appelle `PUT /api/users/me` puis affiche les données
+- l'enregistrement appelle `PUT /api/v1/users/me` puis affiche les données
   retournées par le service ;
 - une réponse `401` déclenche un seul renouvellement suivi d'une seule nouvelle
   tentative ; un second `401` ou un refresh refusé invalide la session locale
@@ -104,12 +104,23 @@ EXPO_PUBLIC_API_URL
 Valeurs locales par défaut :
 
 ```text
+http://localhost:8090
 http://localhost:8080
-http://localhost:8083
 ```
 
+Sur Android physique, ces adresses restent volontairement identiques. Le mode
+de développement supporté utilise le build `com.okit.mobile` et `adb reverse`
+pour transporter les ports `8090`, `8080` et `19006` sur le câble USB. Ainsi,
+le navigateur Android, l'application et les resource servers utilisent tous
+l'issuer `http://localhost:8090/realms/okit`.
+
+Expo Go n'est pas utilisé pour l'authentification OIDC, car il ne permet pas de
+garantir le schéma de callback `okit://auth`. Un accès direct par l'adresse
+Wi-Fi du poste demanderait de modifier ensemble l'issuer Keycloak, les resource
+servers et les URL du client ; il n'est pas activé par défaut en HTTP.
+
 Pour l'aperçu web local, Spring Cloud Gateway autorise uniquement l'origine
-`http://localhost:8081` et transmet les requêtes à `user-service`. En
+`http://localhost:19006` et transmet les requêtes à `user-service`. En
 Kubernetes, le client, la gateway et les APIs sont destinés à partager l'hôte
 HTTPS du groupe.
 

@@ -12,11 +12,11 @@ Routes publiques :
 
 | Préfixe | Destination Traefik | Destination applicative | Protection |
 | --- | --- | --- | --- |
-| `/api/users/**` | `api-gateway:http` | `user-service:http` | JWT vérifié par les deux services |
+| `/api/v1/users/**` | `api-gateway:http` | `user-service:http` | JWT vérifié par les deux services |
 | `/realms/**` | `keycloak:http` | aucune | parcours OIDC public |
 | `/resources/**` | `keycloak:http` | aucune | ressources OIDC publiques |
 
-Le chemin `/api/users/**` est conservé tel quel. Spring Cloud Gateway transmet
+Le chemin `/api/v1/users/**` est conservé tel quel. Spring Cloud Gateway transmet
 l'en-tête `Authorization`, puis `user-service` réalise sa propre validation du
 JWT avant d'accéder au profil correspondant au claim `sub`.
 
@@ -25,17 +25,17 @@ par l'Ingress.
 
 ## Configuration locale
 
-La gateway écoute sur `http://localhost:8083` avec Docker Compose :
+La gateway écoute sur `http://localhost:8080` avec Docker Compose :
 
-- Keycloak : `http://localhost:8080` ;
-- aperçu Expo Web : `http://localhost:8081` ;
-- gateway : `http://localhost:8083` ;
-- `user-service` reste joignable directement sur `http://localhost:8082`
+- Keycloak : `http://localhost:8090` ;
+- aperçu Expo Web : `http://localhost:19006` ;
+- gateway : `http://localhost:8080` ;
+- `user-service` reste joignable directement sur `http://localhost:8081`
   uniquement pour le diagnostic local.
 
-Le client doit utiliser `http://localhost:8083` comme URL de base des API. Le
+Le client doit utiliser `http://localhost:8080` comme URL de base des API. Le
 CORS autorise seulement l'origine explicite configurée par
-`CORS_ALLOWED_ORIGIN`, avec `http://localhost:8081` par défaut.
+`CORS_ALLOWED_ORIGIN`, avec `http://localhost:19006` par défaut.
 
 ## Kubernetes
 
@@ -70,12 +70,12 @@ curl --fail \
 
 # Sans JWT, la gateway doit répondre 401 sans contacter user-service.
 curl --output /dev/null --write-out '%{http_code}\n' \
-  https://dams5-07.students.polytech.lange.xyz/api/users/me
+  https://dams5-07.students.polytech.lange.xyz/api/v1/users/me
 
 # Avec un JWT valide, la requête doit traverser la gateway puis être validée
 # une seconde fois par user-service.
 curl --header "Authorization: Bearer ${ACCESS_TOKEN}" \
-  https://dams5-07.students.polytech.lange.xyz/api/users/me
+  https://dams5-07.students.polytech.lange.xyz/api/v1/users/me
 ```
 
 `ACCESS_TOKEN` est une variable locale et ne doit jamais être enregistré dans

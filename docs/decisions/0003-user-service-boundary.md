@@ -43,13 +43,19 @@ domaine catalogue.
 
 ## API initiale
 
-- `GET /api/users/me` consulte le profil courant ;
-- `PUT /api/users/me` crée ou remplace de façon idempotente le profil courant.
+- `GET /api/v1/users/me` consulte le profil courant ;
+- `PUT /api/v1/users/me` crée ou remplace de façon idempotente le profil courant ;
+- `GET /api/v1/users/me/id` retourne uniquement l'UUID métier correspondant au
+  `sub` du token courant pour les appels interservices agissant au nom de
+  l'acheteur.
 
 Ces routes exigent un JWT valide portant le rôle realm `BUYER`. Cette règle
 d'autorisation, ajoutée après la définition initiale du MVP, est détaillée dans
 l'[ADR 0006](0006-buyer-access-to-user-service.md). L'isolation par `sub`
 continue de garantir qu'un acheteur agit uniquement sur son propre profil.
+La route de résolution n'accepte aucun identifiant en entrée et n'expose aucune
+donnée privée du profil. Un service tel qu'Avis doit transmettre le JWT original
+de l'acheteur et utiliser l'UUID retourné comme référence métier.
 
 ## Alternatives envisagées
 
@@ -75,4 +81,6 @@ domaine client au modèle interne du fournisseur d'identité.
 - un changement d'e-mail reste du ressort de Keycloak ;
 - toute extension vers les adresses ou la wishlist nécessite une décision de
   frontière, un contrat API et un modèle de données documentés ;
+- les autres microservices ne lisent jamais directement `identity_subject` ni
+  la table `user_profiles` ;
 - les futurs endpoints administratifs nécessiteront une décision explicite sur les rôles.

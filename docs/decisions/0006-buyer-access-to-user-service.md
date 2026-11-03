@@ -22,8 +22,9 @@ dans `user-service`.
   `okit-seller-web`, utilisant Authorization Code avec PKCE S256 ;
 - l'inscription publique attribue uniquement `BUYER` ;
 - les comptes vendeurs sont créés et gérés par un administrateur Keycloak, qui
-  retire le rôle hérité `BUYER` puis attribue `SELLER` ;
-- toutes les routes `/api/users/**` exigent un JWT valide portant `BUYER` et ne
+  conserve `default-roles-okit`, attribue directement `SELLER` et n'attribue
+  pas directement `BUYER` ;
+- toutes les routes `/api/v1/users/**` exigent un JWT valide portant `BUYER` et ne
   portant pas `SELLER` ;
 - le rôle est lu depuis `realm_access.roles` et converti en autorité Spring
   `ROLE_BUYER` ;
@@ -34,7 +35,10 @@ dans `user-service`.
   Service Kubernetes n'est pas exposé directement par l'Ingress ;
 - toute autre route est refusée par défaut ;
 - l'application acheteur accepte exclusivement `BUYER` ;
-- le backoffice React accepte exclusivement `SELLER` ;
+- le client vendeur expose aussi `okit_direct_realm_roles`, un claim signé
+  contenant les rôles realm directement attribués sans expansion des
+  composites ;
+- le backoffice React exige `SELLER` et refuse `BUYER` dans ce claim direct ;
 - les contrôles des interfaces ne remplacent jamais l'autorisation côté API ;
 - aucune table ni endpoint de profil vendeur n'est créé : le nom et l'adresse
   e-mail affichés proviennent des claims Keycloak.
@@ -73,6 +77,9 @@ doit toujours prendre la décision finale.
   `okit-seller-web` ;
 - les tokens des deux clients exposent les rôles nécessaires au contrôle de
   séparation ;
+- le rôle technique `default-roles-okit` peut continuer à fournir `BUYER` par
+  héritage aux inscriptions publiques sans transformer un vendeur en double
+  rôle métier dans le backoffice ;
 - les tests couvrent les réponses `401`, `403`, le succès avec `BUYER` et le
   refus d'un compte vendeur ou mal provisionné avec les deux rôles ;
 - l'ajout d'un nouveau type de compte ne donne aucun accès implicite au profil

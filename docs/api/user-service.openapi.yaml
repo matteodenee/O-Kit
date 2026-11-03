@@ -1,15 +1,15 @@
 openapi: 3.1.0
 info:
   title: O'kit User Service API
-  version: 0.2.0
+  version: 0.3.0
   description: API du profil métier et des adresses de l'acheteur authentifié. Le rôle realm Keycloak BUYER est obligatoire.
 servers:
-  - url: http://localhost:8082
+  - url: http://localhost:8081
     description: Développement local direct
 security:
   - bearerAuth: []
 paths:
-  /api/users/me:
+  /api/v1/users/me:
     get:
       operationId: getCurrentUserProfile
       summary: Consulter le profil de l'utilisateur authentifié
@@ -62,7 +62,32 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /api/users/me/addresses:
+  /api/v1/users/me/id:
+    get:
+      operationId: getCurrentUserBusinessId
+      summary: Résoudre l'UUID métier de l'utilisateur authentifié
+      description: >-
+        Retourne uniquement l'identifiant métier associé au claim sub du JWT.
+        Cette route est destinée aux consommateurs agissant pour l'utilisateur
+        authentifié et n'accepte aucun identifiant fourni par le client.
+      responses:
+        "200":
+          description: Identifiant métier trouvé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserId"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Aucun profil métier n'existe encore pour cet utilisateur
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /api/v1/users/me/addresses:
     get:
       operationId: listCurrentUserAddresses
       summary: Lister les adresses actives de l'utilisateur authentifié
@@ -113,7 +138,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /api/users/me/addresses/{addressId}:
+  /api/v1/users/me/addresses/{addressId}:
     parameters:
       - $ref: "#/components/parameters/AddressId"
     get:
@@ -176,7 +201,7 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
-  /api/users/me/addresses/{addressId}/default:
+  /api/v1/users/me/addresses/{addressId}/default:
     parameters:
       - $ref: "#/components/parameters/AddressId"
     put:
@@ -360,6 +385,15 @@ components:
             updatedAt:
               type: string
               format: date-time
+    UserId:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
     Problem:
       type: object
       properties:

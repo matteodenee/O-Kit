@@ -163,6 +163,19 @@ ensure_scope_mapping() {
   fi
 }
 
+ensure_direct_roles_mapper() {
+  mapped_client_uuid=$1
+  mapper_name=okit-direct-realm-roles
+  if ! kcadm get "clients/$mapped_client_uuid/protocol-mappers/models" -r "$REALM" \
+    --fields name --format csv --noquotes | grep -Fx "$mapper_name" >/dev/null; then
+    kcadm create "clients/$mapped_client_uuid/protocol-mappers/models" -r "$REALM" \
+      -s "name=$mapper_name" \
+      -s protocol=openid-connect \
+      -s protocolMapper=okit-direct-realm-roles-mapper \
+      -s consentRequired=false >/dev/null
+  fi
+}
+
 ensure_role "$BUYER_ROLE" "Acheteur autorisé à utiliser l'application mobile O'kit"
 ensure_role "$SELLER_ROLE" "Employé O'kit autorisé à utiliser le backoffice vendeur"
 
@@ -182,8 +195,8 @@ kcadm update "clients/$MOBILE_CLIENT_UUID" -r "$REALM" \
   -s directAccessGrantsEnabled=false \
   -s serviceAccountsEnabled=false \
   -s fullScopeAllowed=false \
-  -s 'redirectUris=["okit://auth","http://localhost:8081","http://localhost:8081/*","https://dams5-07.students.polytech.lange.xyz","https://dams5-07.students.polytech.lange.xyz/*"]' \
-  -s 'webOrigins=["http://localhost:8081","https://dams5-07.students.polytech.lange.xyz"]' \
+  -s 'redirectUris=["okit://auth","http://localhost:19006","http://localhost:19006/*","https://dams5-07.students.polytech.lange.xyz","https://dams5-07.students.polytech.lange.xyz/*"]' \
+  -s 'webOrigins=["http://localhost:19006","https://dams5-07.students.polytech.lange.xyz"]' \
   -s 'attributes."pkce.code.challenge.method"=S256' \
   -s 'defaultClientScopes=["basic","profile","email","roles","web-origins"]' \
   -s 'optionalClientScopes=["address","phone","offline_access"]' >/dev/null
@@ -210,6 +223,8 @@ kcadm update "clients/$SELLER_CLIENT_UUID" -r "$REALM" \
   -s 'attributes."login_theme"=okit-seller' \
   -s 'defaultClientScopes=["basic","profile","email","roles","web-origins"]' \
   -s 'optionalClientScopes=["offline_access"]' >/dev/null
+
+ensure_direct_roles_mapper "$SELLER_CLIENT_UUID"
 
 DEFAULT_ROLE="default-roles-$REALM"
 if ! kcadm get-roles -r "$REALM" --rname "$DEFAULT_ROLE" \

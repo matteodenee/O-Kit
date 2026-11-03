@@ -5,11 +5,11 @@ function withoutTrailingSlash(value: string) {
 }
 
 export const keycloakBaseUrl = withoutTrailingSlash(
-  process.env.EXPO_PUBLIC_KEYCLOAK_URL ?? 'http://localhost:8080'
+  process.env.EXPO_PUBLIC_KEYCLOAK_URL ?? 'http://localhost:8090'
 );
 
 export const apiBaseUrl = withoutTrailingSlash(
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8083'
+  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080'
 );
 
 export const keycloakIssuer = `${keycloakBaseUrl}/realms/okit`;

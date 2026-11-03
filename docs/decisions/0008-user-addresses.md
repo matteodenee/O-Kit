@@ -20,7 +20,7 @@ métier suffisamment indépendant.
 - `user-service` est propriétaire des adresses sauvegardées de l'acheteur ;
 - une table `user_addresses` distincte référence `user_profiles` ;
 - un profil métier existant est obligatoire avant toute création ;
-- toutes les routes restent sous `/api/users/me/**` et exigent exclusivement le
+- toutes les routes restent sous `/api/v1/users/me/**` et exigent exclusivement le
   rôle realm `BUYER` ;
 - la propriété d'une adresse est toujours vérifiée avec le claim JWT `sub` ;
 - plusieurs adresses actives sont autorisées sans limite fonctionnelle ;

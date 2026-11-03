@@ -2,7 +2,8 @@
 
 ## Statut
 
-Acceptée pour l'environnement Kubernetes du projet.
+Acceptée pour l'environnement Kubernetes du projet, amendée par l'ADR 0007
+pour le stockage du service Utilisateur.
 
 ## Contexte
 
@@ -45,10 +46,12 @@ séparées de la base métier du service utilisateur.
 Écartée : elle n'est pas adaptée à un environnement Kubernetes persistant et ne
 sépare pas correctement le cycle de vie de l'identité du conteneur.
 
-### Partager PostgreSQL avec le service utilisateur
+### Partager la base logique de Keycloak avec le service utilisateur
 
-Écartée : les identités et les profils métier ont des propriétaires et des
-cycles de vie distincts. Deux bases dédiées évitent le couplage par le stockage.
+Écartée : les identités et les profils métier ont des propriétaires distincts.
+Keycloak conserve son stockage dédié. L'ADR 0007 autorise en revanche le
+service Utilisateur à partager une instance physique avec d'autres services,
+dans une base logique et avec des credentials séparés.
 
 ### Publier la console d'administration
 
@@ -57,8 +60,8 @@ cycles de vie distincts. Deux bases dédiées évitent le couplage par le stocka
 
 ## Conséquences
 
-- deux volumes de 2 Gio sont consommés au total par les bases utilisateur et
-  Keycloak, ce qui reste dans le quota du namespace ;
+- un volume de 2 Gio reste dédié à la base Keycloak ; le service Utilisateur
+  n'ajoute aucun volume PostgreSQL ;
 - une modification du JSON du realm ne met pas à jour automatiquement un realm
   déjà importé ; une procédure de migration ou une réinitialisation volontaire
   est nécessaire ;

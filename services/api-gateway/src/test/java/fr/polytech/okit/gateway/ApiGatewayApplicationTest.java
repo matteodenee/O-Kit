@@ -35,6 +35,7 @@ class ApiGatewayApplicationTest {
     private static final AtomicReference<String> FORWARDED_AUTHORIZATION = new AtomicReference<>();
     private static final AtomicReference<String> CATALOGUE_FORWARDED_PATH = new AtomicReference<>();
     private static final AtomicReference<String> CATALOGUE_FORWARDED_AUTHORIZATION = new AtomicReference<>();
+    private static final AtomicReference<String> CATALOGUE_FORWARDED_METHOD = new AtomicReference<>();
     private static final DisposableServer USER_SERVICE = HttpServer.create()
             .host("127.0.0.1")
             .port(0)
@@ -51,6 +52,7 @@ class ApiGatewayApplicationTest {
             .port(0)
             .handle((request, response) -> {
                 CATALOGUE_FORWARDED_PATH.set(request.uri());
+                CATALOGUE_FORWARDED_METHOD.set(request.method().name());
                 CATALOGUE_FORWARDED_AUTHORIZATION.set(
                         request.requestHeaders().get(HttpHeaderNames.AUTHORIZATION));
                 return response
@@ -142,14 +144,42 @@ class ApiGatewayApplicationTest {
     }
 
     @Test
-    void doesNotExposeCatalogueWritesThroughTheBuyerRoute() {
+    void rejectsCatalogueWritesFromBuyerTokens() {
         when(jwtDecoder.decode("test-token")).thenReturn(Mono.just(buyerJwt()));
 
         webTestClient.post()
                 .uri("/api/v1/products")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void forwardsCatalogueWritesForAnExclusiveDirectSeller() {
+        when(jwtDecoder.decode("seller-token")).thenReturn(Mono.just(sellerJwt()));
+
+        webTestClient.patch()
+                .uri("/api/v1/products/42")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer seller-token")
+                .bodyValue("{\"statut\":\"DESACTIVE\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        assertThat(CATALOGUE_FORWARDED_METHOD.get()).isEqualTo("PATCH");
+        assertThat(CATALOGUE_FORWARDED_PATH.get()).isEqualTo("/api/v1/products/42");
+        assertThat(CATALOGUE_FORWARDED_AUTHORIZATION.get()).isEqualTo("Bearer seller-token");
+    }
+
+    @Test
+    void rejectsCatalogueWritesWhenSellerAndBuyerAreBothDirectlyAssigned() {
+        when(jwtDecoder.decode("ambiguous-token")).thenReturn(Mono.just(ambiguousSellerJwt()));
+
+        webTestClient.patch()
+                .uri("/api/v1/products/42")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ambiguous-token")
+                .bodyValue("{\"statut\":\"ACTIF\"}")
+                .exchange()
+                .expectStatus().isForbidden();
     }
 
     @Test
@@ -174,6 +204,20 @@ class ApiGatewayApplicationTest {
                 .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")
                 .exchange()
                 .expectStatus().isForbidden();
+    }
+
+    @Test
+    void allowsSellerBackofficePatchCorsPreflight() {
+        webTestClient.method(HttpMethod.OPTIONS)
+                .uri("/api/v1/products/42")
+                .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PATCH")
+                .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization, Content-Type")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173")
+                .expectHeader().value(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS,
+                        value -> assertThat(value).contains("PATCH"));
     }
 
     @Test
@@ -219,11 +263,57 @@ class ApiGatewayApplicationTest {
                         .containsValue("GET"));
     }
 
+    @Test
+    void declaresSellerCatalogueWriteRouteWithoutPathRewrite() {
+        List<RouteDefinition> routes = routeDefinitionLocator.getRouteDefinitions()
+                .collectList()
+                .block();
+
+        assertThat(routes).isNotNull();
+        RouteDefinition catalogueWriteRoute = routes.stream()
+                .filter(route -> route.getId().equals("catalogue-service-seller-write"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(catalogueWriteRoute.getUri().toString())
+                .isEqualTo("http://127.0.0.1:" + CATALOGUE_SERVICE.port());
+        assertThat(catalogueWriteRoute.getFilters()).isEmpty();
+        assertThat(catalogueWriteRoute.getPredicates())
+                .anySatisfy(predicate -> assertThat(predicate.getArgs())
+                        .containsValue("/api/v1/products/**"))
+                .anySatisfy(predicate -> assertThat(predicate.getArgs())
+                        .containsValue("POST")
+                        .containsValue("PATCH"));
+    }
+
     private Jwt buyerJwt() {
         Instant now = Instant.now();
         return Jwt.withTokenValue("test-token")
                 .header("alg", "RS256")
                 .subject("subject-123")
+                .claim("okit_direct_realm_roles", List.of("BUYER"))
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(300))
+                .build();
+    }
+
+    private Jwt sellerJwt() {
+        Instant now = Instant.now();
+        return Jwt.withTokenValue("seller-token")
+                .header("alg", "RS256")
+                .subject("seller-123")
+                .claim("okit_direct_realm_roles", List.of("default-roles-okit", "SELLER"))
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(300))
+                .build();
+    }
+
+    private Jwt ambiguousSellerJwt() {
+        Instant now = Instant.now();
+        return Jwt.withTokenValue("ambiguous-token")
+                .header("alg", "RS256")
+                .subject("ambiguous-123")
+                .claim("okit_direct_realm_roles", List.of("BUYER", "SELLER"))
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(300))
                 .build();

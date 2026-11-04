@@ -118,6 +118,7 @@ services:
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
       CORS_ALLOWED_ORIGIN: http://localhost:19006
+      SELLER_CORS_ALLOWED_ORIGIN: http://localhost:5173
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:

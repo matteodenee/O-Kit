@@ -12,3 +12,4 @@ data:
   OIDC_ISSUER_URI: https://dams5-07.students.polytech.lange.xyz/realms/okit
   OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
   CORS_ALLOWED_ORIGIN: https://dams5-07.students.polytech.lange.xyz
+  SELLER_CORS_ALLOWED_ORIGIN: https://dams5-07.students.polytech.lange.xyz

@@ -59,6 +59,9 @@ table `user_profiles`.
 - la route d'accueil redirige par défaut vers `/catalogue` ;
 - le catalogue charge `GET /api/v1/products?statut=ACTIF` via la gateway ;
 - le profil et les adresses restent accessibles depuis la page Catalogue ;
+- le profil permet de revenir directement au Catalogue ;
+- l'écran des adresses permet de rejoindre explicitement le profil ou le
+  Catalogue, y compris lorsqu'il a été ouvert sans historique de navigation ;
 - le client refuse un token ne portant pas exclusivement `BUYER`, notamment un
   compte vendeur ou un compte mal provisionné avec `BUYER` et `SELLER` ;
 - avant chaque appel protégé, le client réutilise l'access token tant qu'il est

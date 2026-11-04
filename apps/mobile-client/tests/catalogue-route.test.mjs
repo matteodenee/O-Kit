@@ -17,6 +17,16 @@ test('an authenticated buyer is redirected to the catalogue route', async () => 
   assert.match(catalogueRoute, /Réessayer/u);
 });
 
+test('profile and address screens expose explicit catalogue navigation', async () => {
+  const profileRoute = await readFile(join(projectDirectory, 'src/app/index.tsx'), 'utf8');
+  const addressesRoute = await readFile(join(projectDirectory, 'src/app/addresses.tsx'), 'utf8');
+
+  assert.match(profileRoute, /href=["']\/catalogue["']/u);
+  assert.match(profileRoute, /Retour au catalogue/u);
+  assert.match(addressesRoute, /href=["']\/catalogue["']/u);
+  assert.match(addressesRoute, /href=["']\/\?profile=1["']/u);
+});
+
 test('the catalogue API uses the authenticated gateway product endpoint', async () => {
   const catalogueApi = await readFile(join(projectDirectory, 'src/api/catalogue.ts'), 'utf8');
 

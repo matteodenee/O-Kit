@@ -1,4 +1,4 @@
-import { Redirect, useRouter } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -39,7 +39,6 @@ const emptyForm: AddressForm = {
 };
 
 export default function AddressesScreen() {
-  const router = useRouter();
   const { accessToken, authenticatedFetch, isReady, user } = useAuth();
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [form, setForm] = useState<AddressForm>(emptyForm);
@@ -250,14 +249,6 @@ export default function AddressesScreen() {
     }
   }
 
-  function goBack() {
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/');
-  }
-
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <View style={styles.container}>
@@ -269,9 +260,18 @@ export default function AddressesScreen() {
               Enregistre tes destinations de livraison. La première devient ton adresse par défaut.
             </Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={goBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Retour au profil</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Link asChild href="/?profile=1">
+              <Pressable accessibilityRole="button" style={styles.backButton}>
+                <Text style={styles.backButtonText}>Retour au profil</Text>
+              </Pressable>
+            </Link>
+            <Link asChild href="/catalogue">
+              <Pressable accessibilityRole="button" style={styles.catalogueButton}>
+                <Text style={styles.catalogueButtonText}>Catalogue</Text>
+              </Pressable>
+            </Link>
+          </View>
         </View>
 
         {error ? <Notice message={error} tone="error" /> : null}
@@ -470,8 +470,11 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#b75328', fontSize: 11, fontWeight: '900', letterSpacing: 1.8, marginBottom: 8 },
   title: { color: '#17322c', fontSize: 40, fontWeight: '800', letterSpacing: -1.4 },
   subtitle: { color: '#615f59', fontSize: 15, lineHeight: 23, marginTop: 10 },
+  headerActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   backButton: { borderColor: '#b7aa98', borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12 },
   backButtonText: { color: '#17322c', fontSize: 13, fontWeight: '800' },
+  catalogueButton: { backgroundColor: '#c95f2b', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12 },
+  catalogueButtonText: { color: '#fffaf1', fontSize: 13, fontWeight: '800' },
   addButton: { alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#c95f2b', borderRadius: 13, marginBottom: 22, minHeight: 50, paddingHorizontal: 20, justifyContent: 'center' },
   addButtonText: { color: '#fffaf1', fontSize: 15, fontWeight: '800' },
   pressed: { opacity: 0.8, transform: [{ scale: 0.99 }] },

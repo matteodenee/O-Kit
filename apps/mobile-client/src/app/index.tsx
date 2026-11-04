@@ -314,6 +314,15 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
         <Text style={styles.primaryButtonText}>Enregistrer mon profil</Text>
       </Pressable>
 
+      <Link asChild href="/catalogue">
+        <Pressable
+          accessibilityRole="button"
+          style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+        >
+          <Text style={styles.secondaryButtonText}>Retour au catalogue</Text>
+        </Pressable>
+      </Link>
+
       {profile ? (
         <Link asChild href="/addresses">
           <Pressable

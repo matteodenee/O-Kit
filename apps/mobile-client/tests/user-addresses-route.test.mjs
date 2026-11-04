@@ -18,6 +18,8 @@ test('the buyer profile links to the protected address management route', async 
 
   assert.match(profileRoute, /href=["']\/addresses["']/u);
   assert.match(addressesRoute, /<Redirect\s+href=["']\/["']\s*\/>/u);
+  assert.match(addressesRoute, /href=["']\/\?profile=1["']/u);
+  assert.match(addressesRoute, /href=["']\/catalogue["']/u);
   assert.match(addressesRoute, /Choisis d'abord une autre adresse par défaut/u);
 });
 

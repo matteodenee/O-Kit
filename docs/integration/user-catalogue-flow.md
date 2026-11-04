@@ -18,7 +18,10 @@ Catalogue.
 6. le client affiche la liste, un état vide ou une erreur exploitable.
 
 Le profil et les adresses restent disponibles depuis la page Catalogue. Le
-parcours Utilisateur continue d'utiliser `/api/v1/users/**` sur le port 8081.
+profil expose un accès explicite au Catalogue et l'écran des adresses propose
+des accès directs au profil et au Catalogue, sans dépendre de l'historique de
+navigation du navigateur ou de l'application native. Le parcours Utilisateur
+continue d'utiliser `/api/v1/users/**` sur le port 8081.
 
 ## Contrats et sécurité
 
@@ -48,6 +51,18 @@ docker compose exec postgres /docker-entrypoint-initdb.d/10-ensure-catalogue-db.
 Les mots de passe sont fournis uniquement par `.env` à partir des placeholders
 de `.env.example`.
 
+Un jeu de 18 produits actifs et un produit désactivé peut être ajouté
+explicitement, sans suppression ni écrasement des données existantes :
+
+```bash
+docker compose up -d postgres catalogue-service
+docker compose exec postgres /opt/okit/seed-catalogue-demo.sh
+```
+
+Ce seed est réservé au développement, n'est jamais lancé automatiquement et
+est documenté dans
+[`docs/devops/catalogue-demo-data.md`](../devops/catalogue-demo-data.md).
+
 ## Critères d'acceptation
 
 - un visiteur non authentifié reste sur l'écran de connexion ;
@@ -55,6 +70,8 @@ de `.env.example`.
 - la gateway refuse une lecture Catalogue sans JWT valide ;
 - une lecture authentifiée est transmise sans réécriture du chemin ;
 - la page gère les états chargement, erreur et catalogue vide ;
+- le profil et les adresses offrent un retour explicite vers le Catalogue ;
 - les services Utilisateur et Catalogue démarrent avec leurs bases logiques
   indépendantes ;
+- le seed de développement est idempotent et préserve les produits existants ;
 - aucune ressource RabbitMQ n'est requise pour ce parcours.

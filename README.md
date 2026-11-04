@@ -35,6 +35,7 @@ par le domaine catalogue.
 | Mailpit | Courriels de développement | `http://localhost:8025` |
 | PostgreSQL | Instance locale mutualisable, base logique `okit_users` | `localhost:5432` |
 | `user-service` | Profil et adresses de l'acheteur | `http://localhost:8081` |
+| `catalogue-service` | Catalogue des produits | accès interne `catalogue-service:8082` |
 | `api-gateway` | Entrée des API | `http://localhost:8080` |
 | Client Expo | Application acheteur | `http://localhost:19006` |
 | Backoffice React | Authentification vendeur | `http://localhost:5173` |
@@ -63,6 +64,13 @@ set -a
 source .env
 set +a
 ./infra/keycloak/reconcile-local-realm.sh
+```
+
+Ajouter ensuite le catalogue fictif de développement, sans modifier les
+produits déjà présents :
+
+```bash
+docker compose exec postgres /opt/okit/seed-catalogue-demo.sh
 ```
 
 Vérification rapide :
@@ -123,6 +131,7 @@ SELLER, se trouve dans [`README_DEVELOPPEUR.md`](README_DEVELOPPEUR.md).
 - [Modèle de données](docs/architecture/user-service-data-model.md)
 - [Authentification Keycloak](docs/auth/keycloak.md)
 - [Parcours mobile](docs/mobile/auth-profile-flow.md)
+- [Données de démonstration Catalogue](docs/devops/catalogue-demo-data.md)
 - [Gestion des adresses](docs/functional/user-addresses.md)
 - [Décisions d'architecture](docs/decisions/)
 

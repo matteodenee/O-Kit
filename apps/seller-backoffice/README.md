@@ -2,9 +2,9 @@
 
 SPA React et TypeScript réservée aux employés O'kit auxquels le rôle realm
 Keycloak `SELLER` est attribué directement, sans attribution directe de
-`BUYER`. Le mapping technique `default-roles-okit` est conservé. Elle ne
-contient aucune fonctionnalité catalogue et ne stocke aucun profil vendeur
-dans `user-service`.
+`BUYER`. Le mapping technique `default-roles-okit` est conservé. Elle permet de
+consulter et modifier les produits exposés par le microservice Catalogue, sans
+stocker de profil vendeur dans `user-service`.
 
 ## Démarrage local
 
@@ -27,9 +27,13 @@ npm ci
 npm run dev
 ```
 
-Le backoffice est accessible sur `http://localhost:5173` et utilise Keycloak
-sur `http://localhost:8090`. L'API Gateway reste exposée séparément sur
-`http://localhost:8080`.
+Le backoffice est accessible sur `http://localhost:5173`, utilise Keycloak sur
+`http://localhost:8090` et appelle l'API Gateway sur `http://localhost:8080`.
+
+La gestion Catalogue permet la liste, le détail, la modification, le statut et
+la disponibilité globale. La création attend encore les endpoints de lecture
+des référentiels requis par l'API. Le périmètre et cette limite sont détaillés
+dans [`docs/seller/catalogue-management.md`](../../docs/seller/catalogue-management.md).
 
 ## Authentification
 

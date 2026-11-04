@@ -448,6 +448,11 @@ npm run dev
 
 Ouvrir dans le navigateur du PC : **http://localhost:5173**. Laisser le terminal Vite ouvert.
 
+Après connexion, ouvrir **Catalogue** dans la barre latérale. La liste doit
+contenir les produits actifs et désactivés. La fiche permet de modifier les
+champs pris en charge, le statut et la disponibilité globale. La création reste
+désactivée tant que le microservice ne fournit pas les référentiels nécessaires.
+
 **Compte vendeur :** un compte `SELLER` doit être provisionné par l'administrateur ; un compte `BUYER` ne suffit pas pour accéder au backoffice. Pour créer un vendeur local, **dans un autre terminal depuis la racine `O-Kit`** :
 
 ```bash

@@ -3,7 +3,7 @@
 O'Kit est une application de m-commerce. Le périmètre utilisateur livré couvre
 l'authentification centralisée par Keycloak, le profil métier acheteur dans
 `user-service`, la gestion des adresses de livraison, l'application mobile Expo
-et l'authentification du backoffice vendeur.
+et le backoffice vendeur authentifié avec gestion des produits Catalogue.
 
 ## État du MVP utilisateur
 
@@ -19,6 +19,8 @@ Le MVP d'authentification et de profil de `user-service` est terminé :
 - l'application mobile accepte exclusivement `BUYER` ;
 - le backoffice exige `SELLER` sans attribution directe de `BUYER` et ignore
   les rôles techniques hérités de `default-roles-okit` ;
+- le backoffice consulte et modifie les produits via la Gateway, sans exposer
+  les écritures Catalogue aux acheteurs ;
 - un vendeur ne possède aucune donnée dans `user-service`.
 
 La tranche adresses appartient également à `user-service` : un acheteur peut
@@ -132,6 +134,7 @@ SELLER, se trouve dans [`README_DEVELOPPEUR.md`](README_DEVELOPPEUR.md).
 - [Authentification Keycloak](docs/auth/keycloak.md)
 - [Parcours mobile](docs/mobile/auth-profile-flow.md)
 - [Données de démonstration Catalogue](docs/devops/catalogue-demo-data.md)
+- [Gestion vendeur du Catalogue](docs/seller/catalogue-management.md)
 - [Gestion des adresses](docs/functional/user-addresses.md)
 - [Décisions d'architecture](docs/decisions/)
 

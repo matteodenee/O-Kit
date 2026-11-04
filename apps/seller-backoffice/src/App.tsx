@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import type { CatalogueRequest } from './api/catalogue';
 import { applicationUrl, isExclusiveSeller, keycloak } from './auth/keycloak';
+import CatalogueManager from './catalogue/CatalogueManager';
 import './styles.css';
+
+const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 
 type TokenIdentity = {
   email?: string;
@@ -38,6 +42,7 @@ function currentAuthenticationState(): AuthenticationState {
 export default function App() {
   const [authentication, setAuthentication] =
     useState<AuthenticationState>(initialState);
+  const [activeSection, setActiveSection] = useState<'overview' | 'catalogue'>('overview');
 
   const synchronizeAuthentication = useCallback(() => {
     setAuthentication(currentAuthenticationState());
@@ -104,6 +109,23 @@ export default function App() {
       keycloak.clearToken();
       setAuthentication({ ...initialState, loading: false });
     });
+
+  const catalogueRequest = useCallback<CatalogueRequest>(async (path, init = {}) => {
+    try {
+      await keycloak.updateToken(30);
+    } catch {
+      expireSession();
+      throw new Error('La session vendeur a expiré. Reconnecte-toi.');
+    }
+
+    if (!keycloak.token || !isExclusiveSeller()) {
+      throw new Error('Le compte connecté ne possède pas l’autorisation vendeur requise.');
+    }
+
+    const headers = new Headers(init.headers);
+    headers.set('Authorization', `Bearer ${keycloak.token}`);
+    return fetch(`${apiUrl}${path}`, { ...init, headers });
+  }, [expireSession]);
 
   if (authentication.loading) {
     return (
@@ -184,47 +206,68 @@ export default function App() {
       <aside className="sidebar">
         <div className="wordmark">O’kit</div>
         <nav aria-label="Navigation vendeur">
-          <a className="active" href="#overview">Vue d’ensemble</a>
-          <span aria-disabled="true">Fonctions métier · à venir</span>
+          <button
+            className={activeSection === 'overview' ? 'active' : undefined}
+            type="button"
+            onClick={() => setActiveSection('overview')}
+          >
+            Vue d’ensemble
+          </button>
+          <button
+            className={activeSection === 'catalogue' ? 'active' : undefined}
+            type="button"
+            onClick={() => setActiveSection('catalogue')}
+          >
+            Catalogue
+          </button>
         </nav>
         <button className="logout-button" type="button" onClick={logout}>
           Déconnexion
         </button>
       </aside>
-      <main className="dashboard" id="overview">
-        <header className="dashboard-header">
-          <div>
-            <p className="eyebrow">ESPACE VENDEUR</p>
-            <h1>Bonjour, {displayName}.</h1>
-          </div>
-          <div className="role-pill">SELLER</div>
-        </header>
+      <main className="dashboard" id={activeSection}>
+        {activeSection === 'catalogue' ? (
+          <CatalogueManager request={catalogueRequest} />
+        ) : (
+          <>
+            <header className="dashboard-header">
+              <div>
+                <p className="eyebrow">ESPACE VENDEUR</p>
+                <h1>Bonjour, {displayName}.</h1>
+              </div>
+              <div className="role-pill">SELLER</div>
+            </header>
 
-        <section className="status-card">
-          <div>
-            <p className="eyebrow">AUTHENTIFICATION ACTIVE</p>
-            <h2>Ton accès vendeur est opérationnel.</h2>
-            <p>
-              Keycloak a validé ton identité et ton rôle. Les fonctionnalités
-              métier seront ajoutées par les services qui en sont propriétaires.
-            </p>
-          </div>
-          <div className="checkmark" aria-hidden="true">✓</div>
-        </section>
+            <section className="status-card">
+              <div>
+                <p className="eyebrow">AUTHENTIFICATION ACTIVE</p>
+                <h2>Ton accès vendeur est opérationnel.</h2>
+                <p>
+                  Keycloak a validé ton identité et ton rôle. Tu peux maintenant
+                  consulter et maintenir les produits du Catalogue.
+                </p>
+              </div>
+              <div className="checkmark" aria-hidden="true">✓</div>
+            </section>
 
-        <section className="dashboard-grid">
-          <article>
-            <p className="eyebrow">IDENTITÉ KEYCLOAK</p>
-            <h3>{displayName}</h3>
-            <p>{authentication.identity?.email ?? 'E-mail non fourni'}</p>
-            <small>Aucun profil vendeur n’est dupliqué dans PostgreSQL.</small>
-          </article>
-          <article className="muted-card">
-            <p className="eyebrow">GESTION DU COMPTE</p>
-            <h3>Administrée par O’kit</h3>
-            <p>La création, les rôles et la désactivation sont gérés dans Keycloak.</p>
-          </article>
-        </section>
+            <section className="dashboard-grid">
+              <article>
+                <p className="eyebrow">IDENTITÉ KEYCLOAK</p>
+                <h3>{displayName}</h3>
+                <p>{authentication.identity?.email ?? 'E-mail non fourni'}</p>
+                <small>Aucun profil vendeur n’est dupliqué dans PostgreSQL.</small>
+              </article>
+              <article className="catalogue-card">
+                <p className="eyebrow">CATALOGUE</p>
+                <h3>Gérer les produits</h3>
+                <p>Consulte, modifie, active ou désactive les produits O’kit.</p>
+                <button className="inline-link" type="button" onClick={() => setActiveSection('catalogue')}>
+                  Ouvrir le Catalogue →
+                </button>
+              </article>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );

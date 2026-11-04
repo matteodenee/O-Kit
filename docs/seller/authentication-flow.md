@@ -3,9 +3,9 @@
 ## Objectif
 
 Le backoffice React permet à un employé O'kit autorisé de se connecter avec un
-compte créé par un administrateur. Cette tranche fournit l'authentification, le
-contrôle du rôle et un écran d'accueil. Elle ne crée ni API ni microservice
-catalogue.
+compte créé par un administrateur. Il fournit l'authentification, le contrôle
+du rôle et l'accès aux fonctions Catalogue déjà exposées par le microservice
+propriétaire. Il ne crée aucun microservice métier supplémentaire.
 
 ## Sources de vérité
 
@@ -93,3 +93,5 @@ Le client public `okit-seller-web` utilise :
 - la connexion vendeur ne présente aucun lien d'inscription publique ;
 - un vendeur peut demander la réinitialisation de son mot de passe par e-mail ;
 - aucune donnée vendeur n'est créée dans PostgreSQL.
+- les écritures Catalogue sont refusées par la Gateway pour un compte sans
+  `SELLER` directement attribué ou portant aussi directement `BUYER`.

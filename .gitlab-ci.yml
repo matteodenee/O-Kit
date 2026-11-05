@@ -5,26 +5,49 @@ stages:
   - scan    # reserve pour trivy
   - deploy  # reserve pour cluster Polytech
 
+k8s-lint:
+  stage: validate
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  script:
+    - kubectl kustomize k8s/services/ms-catalogue/
+    - kubectl kustomize k8s/services/ms-utilisateur/
+    - kubectl kustomize infra/kubernetes/gateway/
+    - kubectl kustomize infra/keycloak/
+    - kubectl kustomize infra/kubernetes/overlays/user-staging/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH'
+
 k8s-check:
   stage: validate
   image:
     name: bitnami/kubectl:latest
     entrypoint: [""]
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_PIPELINE_SOURCE == "web"'
-      when: manual
-      allow_failure: true
     - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
-      allow_failure: true
-    - when: never
+    - if: '$CI_COMMIT_BRANCH'
   script:
-    - mkdir -p ~/.kube && echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config && chmod 600 ~/.kube/config
+    - mkdir -p ~/.kube
+    - |
+      if [ -n "$KUBECONFIG" ] && [ -f "$KUBECONFIG" ]; then
+        cp "$KUBECONFIG" ~/.kube/config
+      elif [ -n "$KUBE_CONFIG" ]; then
+        echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+      else
+        echo "Erreur: variable KUBECONFIG (fichier) ou KUBE_CONFIG (base64) requise"
+        exit 1
+      fi
+    - chmod 600 ~/.kube/config
     - kubectl config set-context --current --namespace=polytech-dams5-07
-    - kubectl get pods
-    - kubectl get services
-    - kubectl get ingress
-    - kubectl describe resourcequota
+    - kubectl --request-timeout=15s get pods
+    - kubectl --request-timeout=15s get services
+    - kubectl --request-timeout=15s get ingress
+    - kubectl --request-timeout=15s describe resourcequota
 
 test:ms-catalogue:
   stage: test

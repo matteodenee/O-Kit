@@ -10,11 +10,12 @@ Tous les développeurs, contributeurs Docker et responsables CI/CD doivent impé
 
 | Paramètre | Valeur | Description |
 | :--- | :--- | :--- |
+| **Serveur** | `https://cluster.polytech.lange.xyz:443` | Endpoint API du cluster Kubernetes |
 | **Namespace dédié** | `polytech-dams5-07` | Namespace unique alloué à notre équipe |
 | **Domaine public** | `dams5-07.students.polytech.lange.xyz` | Point d'entrée DNS public sécurisé |
 | **Ingress Controller** | `traefik` | `ingressClassName: traefik` |
 | **Gestionnaire TLS / Cert-Manager** | `cert-manager` | ClusterIssuer obligatoire : `letsencrypt-etudiants` |
-| **Accès CI/CD** | Secret GitLab CI/CD `KUBE_CONFIG` | Kubeconfig complet encodé en base64 |
+| **Accès CI/CD** | Variable GitLab CI/CD `KUBECONFIG` (type File avec le contenu de `dams5-07.yaml`) | Fichier Kubeconfig officiel (avec repli `KUBE_CONFIG` base64) |
 
 ---
 
@@ -24,40 +25,41 @@ Le namespace est bridé par des quotas stricts appliqués par Kubernetes. Voici 
 
 ```yaml
 ResourceQuota Summary:
-  services: "10"
-  pods: "20"
-  persistentvolumeclaims: "5"
-  requests.cpu: "2"      # 2000m
-  limits.cpu: "4"        # 4000m
-  requests.memory: "4Gi" # 4096Mi
-  limits.memory: "8Gi"   # 8192Mi
+  services: "20"
+  pods: "40"
+  persistentvolumeclaims: "10" # (50 Gi total)
+  requests.cpu: "4"      # 4000m
+  limits.cpu: "8"        # 8000m
+  requests.memory: "8Gi" # 8192Mi
+  limits.memory: "16Gi"  # 16384Mi
 ```
 
 ---
 
-## 3. Gestion Critique des Services (Max 10)
+## 3. Gestion Critique des Services (Max 20)
 
 > [!CAUTION]
-> **Contrainte critique** : Le cluster interdit la création de plus de **10 objets `Service`** au total dans le namespace `polytech-dams5-07`.
+> **Contrainte critique** : Le cluster interdit la création de plus de **20 objets `Service`** au total dans le namespace `polytech-dams5-07`.
 
 ### Règles impératives
 1. **Types de services autorisés** :
    - Seul le type `ClusterIP` est autorisé.
    - Les types `LoadBalancer` et `NodePort` sont **strictement interdits** (rejet automatique par les politiques du cluster). L'accès externe se fait impérativement via l'Ingress Traefik.
-2. **Architecture ciblée (10 services max)** :
+2. **Architecture ciblée (20 services max)** :
    Notre architecture prévoit à terme :
    - 9 microservices métier : User, Commande, Stock, Catalogue, Avis, Chatbot, Paiement, Retour, KPI.
    - 1 instance Keycloak (authentification).
    - 1 Backoffice web.
+   - 1 API Gateway.
    - Bases de données / caches.
 
-   Le total brut dépasse 10 services si chaque composant instancie son propre Service Kubernetes.
+   Le total brut respecte le quota de 20 services si chaque composant instancie son propre Service Kubernetes.
 
 ### Stratégie d'optimisation
 - **Mutualisation de la base de données** : Ne **jamais** créer un Service K8s de base de données par microservice. Utiliser une instance PostgreSQL centralisée (ou cluster mutualisé) avec un seul Service K8s `postgres` exposant les bases logiques de chaque microservice.
 - **Microservices asynchrones sans Service K8s** : Tout microservice qui consomme uniquement des messages d'une file (ex: Worker de synchronisation, générateur de KPI asynchrone) ne doit **pas** avoir d'objet `Service` s'il n'a pas besoin d'être interrogé directement par HTTP/gRPC.
 - **Passerelle / Ingress centralisé** : L'Ingress Traefik achemine directement le trafic vers les Services `ClusterIP` des applications exposées.
-- **Budget d'allocation des 10 Services** :
+- **Budget d'allocation des Services** :
 
 | # | Composant | Nom du Service | Type | Port(s) |
 |---|---|---|---|---|
@@ -69,16 +71,16 @@ ResourceQuota Summary:
 | 6 | Microservice Catalogue | `ms-catalogue` | ClusterIP | `8082` (`http`) |
 | 7 | Microservice Stock | `ms-stock` | ClusterIP | `3000` (`http`) |
 | 8 | Microservice Paiement | `ms-paiement` | ClusterIP | `3000` (`http`) |
-| 9 | Microservice Avis | `ms-avis` | ClusterIP | `3000` (`http`) |
-| 10 | Microservice Chatbot / Retours | `ms-gateway` / partagé | ClusterIP | `3000` (`http`) |
+| 9 | Microservice Avis | `ms-avis` | ClusterIP | `8083` (`http`) |
+| 10 | API Gateway | `api-gateway` | ClusterIP | `8080` (`http`) |
 
 *(Tout ajout de Service nécessite la validation de l'équipe DevOps pour ne pas saturer le quota).*
 
 ---
 
-## 4. Quotas de Pods & Stratégie de Déploiement (Max 20)
+## 4. Quotas de Pods & Stratégie de Déploiement (Max 40)
 
-- **Nombre maximum de pods simultanés** : 20.
+- **Nombre maximum de pods simultanés** : 40.
 - **Nombre de réplicas** :
   - Chaque microservice et composant doit être configuré avec `replicas: 1` par défaut.
   - Les déploiements doivent utiliser une stratégie de mise à jour progressive contrôlée :
@@ -89,14 +91,14 @@ ResourceQuota Summary:
         maxSurge: 1
         maxUnavailable: 0
     ```
-    *Attention : Lors d'un déploiement simultané de plusieurs services, veiller à ce que le nombre temporaire de pods (pods courants + pods créés par le `maxSurge`) ne dépasse pas 20.*
+    *Attention : Lors d'un déploiement simultané de plusieurs services, veiller à ce que le nombre temporaire de pods (pods courants + pods créés par le `maxSurge`) ne dépasse pas 40.*
 
 ---
 
-## 5. Quotas de Stockage Persistant (Max 5 PVC / 20 Go)
+## 5. Quotas de Stockage Persistant (Max 10 PVC / 50 Go)
 
-- **Nombre maximum de PVC** : 5.
-- **Capacité totale maximale** : 20 Go.
+- **Nombre maximum de PVC** : 10.
+- **Capacité totale maximale** : 50 Go.
 - **Règles d'or** :
   - **100% Stateless pour les microservices** : Aucun microservice d'application ne doit réclamer de PVC.
   - Réservation stricte des PVC pour les composants avec persistance :
@@ -116,11 +118,11 @@ ResourceQuota Summary:
 
 ### Enveloppe Globale
 - **CPU** :
-  - Somme des `requests` $\le$ **2 cœurs (2000m)**
-  - Somme des `limits` $\le$ **4 cœurs (4000m)**
+  - Somme des `requests` $\le$ **4 cœurs (4000m)**
+  - Somme des `limits` $\le$ **8 cœurs (8000m)**
 - **Mémoire** :
-  - Somme des `requests` $\le$ **4 Go (4096Mi)**
-  - Somme des `limits` $\le$ **8 Go (8192Mi)**
+  - Somme des `requests` $\le$ **8 Go (8192Mi)**
+  - Somme des `limits` $\le$ **16 Go (16384Mi)**
 
 ### Profils de dimensionnement types
 
@@ -177,8 +179,8 @@ resources:
 | Backoffice | Web | 50m | 150m | 96Mi | 192Mi |
 | 7 Microservices actifs | Métier ($7 \times 100\text{m}$) | 700m | 1750m | 1344Mi ($7 \times 192$) | 2688Mi ($7 \times 384$) |
 | Marge de manœuvre | Buffer | 800m | 1100m | 1760Mi | 3528Mi |
-| **Total Alloué (Req / Lim)** | | **1200m / 2000m** | **2900m / 4000m** | **2336Mi / 4096Mi** | **4672Mi / 8192Mi** |
-| **Quota Namespace** | | **2000m max** | **4000m max** | **4096Mi max** | **8192Mi max** |
+| **Total Alloué (Req / Lim)** | | **1200m / 4000m** | **2900m / 8000m** | **2336Mi / 8192Mi** | **4672Mi / 16384Mi** |
+| **Quota Namespace** | | **4000m max** | **8000m max** | **8192Mi max** | **16384Mi max** |
 
 Le budget respecte scrupuleusement les plafonds du `ResourceQuota`.
 
@@ -277,7 +279,7 @@ Prometheus et Grafana sont préinstallés sur le cluster pour collecter et visua
 
 Avant d'intégrer ou déployer un nouveau manifest Kubernetes :
 - [ ] Le namespace est explicitement `polytech-dams5-07` (ou géré via Kustomize).
-- [ ] Le nombre total de `Service` ne dépasse pas 10.
+- [ ] Le nombre total de `Service` ne dépasse pas 20.
 - [ ] Aucun Service n'est de type `LoadBalancer` ou `NodePort`.
 - [ ] Chaque conteneur possède `requests.cpu`, `requests.memory`, `limits.cpu`, `limits.memory`.
 - [ ] Les valeurs de ressources respectent les profils de dimensionnement.

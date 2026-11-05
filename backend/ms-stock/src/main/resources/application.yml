@@ -1,0 +1,64 @@
+server:
+  port: ${SERVER_PORT:8084}
+  shutdown: graceful
+
+spring:
+  application:
+    name: ms-stock
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/okit_stock_db}
+    username: ${DB_USERNAME:okit_stock}
+    password: ${DB_PASSWORD:?Define DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 5000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # schéma piloté uniquement par Flyway
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8090/realms/okit}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8090/realms/okit/protocol/openid-connect/certs}
+
+okit:
+  stock:
+    low-stock-threshold: 10
+    security:
+      seller-role: SELLER
+      service-role: SVC_COMMANDE
+      roles-claim-path: realm_access.roles
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
+logging:
+  level:
+    com.okit.stock: INFO

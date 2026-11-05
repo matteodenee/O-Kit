@@ -1,0 +1,68 @@
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: api-gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8090/realms/okit}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8090/realms/okit/protocol/openid-connect/certs}
+  cloud:
+    gateway:
+      server:
+        webflux:
+          metrics:
+            enabled: true
+          routes:
+            - id: user-service
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/users/**
+            - id: catalogue-service
+              uri: ${CATALOGUE_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/products/**
+                - Method=GET
+            - id: catalogue-service-seller-write
+              uri: ${CATALOGUE_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/products/**
+                - Method=POST,PATCH
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                allowed-origins:
+                  - ${CORS_ALLOWED_ORIGIN:http://localhost:19006}
+                  - ${SELLER_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+                allowed-methods:
+                  - GET
+                  - POST
+                  - PATCH
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                allowed-headers:
+                  - Authorization
+                  - Content-Type
+                max-age: 3600
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      base-path: /
+      path-mapping:
+        prometheus: metrics
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}

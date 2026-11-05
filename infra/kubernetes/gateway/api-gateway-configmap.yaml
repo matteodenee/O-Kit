@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: okit
+data:
+  SERVER_PORT: "8080"
+  USER_SERVICE_URL: http://user-service:8081
+  CATALOGUE_SERVICE_URL: http://ms-catalogue:8082
+  OIDC_ISSUER_URI: https://dams5-07.students.polytech.lange.xyz/realms/okit
+  OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+  CORS_ALLOWED_ORIGIN: https://dams5-07.students.polytech.lange.xyz
+  SELLER_CORS_ALLOWED_ORIGIN: https://dams5-07.students.polytech.lange.xyz

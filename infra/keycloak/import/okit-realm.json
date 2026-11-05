@@ -1,0 +1,156 @@
+{
+  "realm": "okit",
+  "displayName": "O'kit",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "verifyEmail": false,
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "noreply@okit.local",
+    "fromDisplayName": "O'kit",
+    "auth": "false",
+    "starttls": "false",
+    "ssl": "false"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "BUYER",
+        "description": "Acheteur autorisé à utiliser l'application mobile O'kit"
+      },
+      {
+        "name": "SELLER",
+        "description": "Employé O'kit autorisé à utiliser le backoffice vendeur"
+      }
+    ]
+  },
+  "defaultRoles": [
+    "BUYER"
+  ],
+  "clients": [
+    {
+      "clientId": "okit-mobile",
+      "name": "O'kit mobile",
+      "description": "Client public OIDC de l'application Expo O'kit",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "okit://auth",
+        "http://localhost:19006",
+        "http://localhost:19006/*",
+        "https://dams5-07.students.polytech.lange.xyz",
+        "https://dams5-07.students.polytech.lange.xyz/*"
+      ],
+      "webOrigins": [
+        "http://localhost:19006",
+        "https://dams5-07.students.polytech.lange.xyz"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "profile",
+        "email",
+        "roles",
+        "web-origins"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access"
+      ]
+    },
+    {
+      "clientId": "okit-seller-web",
+      "name": "O'kit seller backoffice",
+      "description": "Client public OIDC du backoffice React réservé aux employés O'kit",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [
+        "http://localhost:5173",
+        "http://localhost:5173/*",
+        "https://dams5-07.students.polytech.lange.xyz/backoffice",
+        "https://dams5-07.students.polytech.lange.xyz/backoffice/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "https://dams5-07.students.polytech.lange.xyz"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "login_theme": "okit-seller"
+      },
+      "defaultClientScopes": [
+        "basic",
+        "profile",
+        "email",
+        "roles",
+        "web-origins"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "okit-direct-realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "okit-direct-realm-roles-mapper",
+          "consentRequired": false,
+          "config": {}
+        }
+      ]
+    }
+  ],
+  "scopeMappings": [
+    {
+      "client": "okit-mobile",
+      "roles": [
+        "BUYER",
+        "SELLER"
+      ]
+    },
+    {
+      "client": "okit-seller-web",
+      "roles": [
+        "BUYER",
+        "SELLER"
+      ]
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "name": "declarative-user-profile",
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"unmanagedAttributePolicy\":\"ADMIN_EDIT\",\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":false}],\"groups\":[]}"
+          ]
+        }
+      }
+    ]
+  }
+}

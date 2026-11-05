@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: polytech-dams5-07
+resources:
+  - kubernetes/postgres-service.yaml
+  - kubernetes/postgres-statefulset.yaml
+  - kubernetes/postgres-network-policy.yaml
+  - kubernetes/keycloak-deployment.yaml
+  - kubernetes/keycloak-service.yaml
+  - kubernetes/keycloak-monitor.yaml
+configMapGenerator:
+  - name: keycloak-realm
+    files:
+      - import/okit-realm.json
+images:
+  - name: keycloak
+    newName: registry.example.invalid/okit/keycloak
+    newTag: replace-me

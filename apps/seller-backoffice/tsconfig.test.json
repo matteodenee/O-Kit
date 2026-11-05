@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "outDir": ".test-build",
+    "rootDir": ".",
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/auth/roles.ts",
+    "src/api/catalogue.ts",
+    "tests/catalogue-api.test.ts",
+    "tests/node-shims.d.ts",
+    "tests/roles.test.ts"
+  ]
+}

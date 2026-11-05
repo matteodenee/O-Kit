@@ -1,26 +1,43 @@
 {
   "name": "mobile",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "dependencies": {
-    "expo": "~57.0.24",
-    "expo-auth-session": "~57.0.12",
-    "expo-dev-client": "~57.0.19",
+    "@expo/metro-runtime": "~57.0.16",
+    "@react-native-community/datetimepicker": "9.1.0",
+    "expo": "~57.0.31",
+    "expo-auth-session": "~57.0.16",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.22",
+    "expo-crypto": "~57.0.4",
+    "expo-dev-client": "~57.0.20",
+    "expo-linking": "~57.0.13",
+    "expo-router": "~57.0.29",
     "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "~57.0.3",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "start": "expo start --port 19006",
+    "android:usb:prepare": "bash ./scripts/prepare-android-usb.sh",
+    "start:android:usb": "npm run android:usb:prepare && expo start --dev-client --localhost --clear --port 19006 --android",
+    "android": "expo run:android --port 19006",
+    "ios": "expo run:ios --port 19006",
+    "web": "expo start --web --port 19006",
+    "test": "node --test tests/*.test.mjs",
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit"
   },
   "private": true
 }

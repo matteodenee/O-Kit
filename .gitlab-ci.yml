@@ -1,0 +1,56 @@
+stages:
+  - validate
+  - test
+  - build   # reserve pour etapes futures (Docker registry)
+  - scan    # reserve pour trivy
+  - deploy  # reserve pour cluster Polytech
+
+k8s-check:
+  stage: validate
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+      when: manual
+      allow_failure: true
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+      allow_failure: true
+    - when: never
+  script:
+    - mkdir -p ~/.kube && echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config && chmod 600 ~/.kube/config
+    - kubectl config set-context --current --namespace=polytech-dams5-07
+    - kubectl get pods
+    - kubectl get services
+    - kubectl get ingress
+    - kubectl describe resourcequota
+
+test:ms-catalogue:
+  stage: test
+  image: eclipse-temurin:21-jdk-alpine
+  before_script:
+    - chmod +x backend/ms-catalogue/mvnw
+  script:
+    - cd backend/ms-catalogue
+    - ./mvnw clean test
+  artifacts:
+    when: always
+    reports:
+      junit: backend/ms-catalogue/target/surefire-reports/TEST-*.xml
+    paths:
+      - backend/ms-catalogue/target/surefire-reports/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/ms-catalogue/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - backend/ms-catalogue/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - backend/ms-catalogue/**/*
+        - .gitlab-ci.yml

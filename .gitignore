@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+apps/mobile-client/.env.local
+apps/mobile-client/node_modules/
+apps/mobile-client/.expo/
+services/*/target/
+backend/*/target/

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  labels:
+    app.kubernetes.io/name: user-service
+    app.kubernetes.io/part-of: okit
+data:
+  SERVER_PORT: "8081"
+  USER_DB_HOST: postgres-db
+  USER_DB_PORT: "5432"
+  USER_DB_NAME: okit_users
+  USER_DB_USERNAME: okit_user
+  OIDC_ISSUER_URI: https://dams5-07.students.polytech.lange.xyz/realms/okit
+  OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs

@@ -21,7 +21,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Optional;
-
+import com.okit.catalogue.dto.VarianteDto;
+import com.okit.catalogue.entities.Taille;
+import com.okit.catalogue.entities.Variante;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
 @Component
 public class ProduitMapper {
 
@@ -101,6 +107,10 @@ public class ProduitMapper {
         EquipeDto equipeDto = produit.getEquipe() != null
                 ? new EquipeDto(produit.getEquipe().getIdEquipe(), produit.getEquipe().getNom(), produit.getEquipe().getLogoUrl(), produit.getEquipe().getType())
                 : null;
+        List<VarianteDto> variantesDto = produit.getVariantes().stream()
+                .sorted(Comparator.comparing(Variante::getTaille))   // ordre de l'enum : XXS -> XXXL
+                .map(v -> new VarianteDto(v.getIdVariante(), v.getTaille()))
+                .toList();
 
         return new ProduitDetailDto(
                 produit.getIdProduit(),
@@ -119,7 +129,8 @@ public class ProduitMapper {
                 saisonDto,
                 equipeDto,
                 tauxTva,
-                promotionDto
+                promotionDto,
+                variantesDto
         );
     }
 
@@ -142,6 +153,11 @@ public class ProduitMapper {
         produit.setMarque(marque);
         produit.setTauxTva(tva);
         produit.setEquipe(equipe);
+
+        Collection<Taille> tailles = (dto.tailles() == null || dto.tailles().isEmpty())
+                ? List.of(Taille.values())
+                : new LinkedHashSet<>(dto.tailles());   // dédoublonne
+        tailles.forEach(t -> produit.addVariante(new Variante(produit, t)));
 
         return produit;
     }

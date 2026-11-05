@@ -238,6 +238,19 @@ public class Produit {
         }
     }
 
+    // pas d'orphanRemoval : une variante peut être référencée par du stock ou des commandes
+    @OneToMany(mappedBy = "produit", cascade = CascadeType.PERSIST)
+    private List<Variante> variantes = new ArrayList<>();
+
+    public List<Variante> getVariantes() { return variantes; }
+
+    public void addVariante(Variante variante) {
+        if (variante != null) {
+            variantes.add(variante);
+            variante.setProduit(this);
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

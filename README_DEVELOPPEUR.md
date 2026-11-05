@@ -255,6 +255,62 @@ docker compose logs --tail=100 user-service
 
 **Ne jamais utiliser `docker compose down --volumes` pour résoudre un problème de démarrage** : cela peut effacer des données locales. L'avertissement Docker « Bake / buildx isn't installed » n'a pas empêché les images de se construire lors de la reproduction.
 
+### 5.1 Lancer l'application acheteur dans un navigateur
+
+Toutes les commandes de cette procédure partent de la racine du dépôt `O-Kit`.
+
+#### Démarrer les services
+
+```bash
+docker compose up -d --build
+```
+
+Attendre que PostgreSQL, Keycloak, les microservices Utilisateur et Catalogue,
+ainsi que l'API Gateway soient opérationnels. Leur état peut être contrôlé avec
+`docker compose ps`.
+
+#### Configurer Keycloak si nécessaire
+
+Si le realm local n'a pas encore été réconcilié, charger les variables du
+fichier `.env`, puis exécuter le script prévu à cet effet :
+
+```bash
+set -a
+source .env
+set +a
+
+./infra/keycloak/reconcile-local-realm.sh
+```
+
+#### Remplir le catalogue avec les produits de démonstration
+
+Après le démarrage du microservice Catalogue et la création de son schéma,
+exécuter :
+
+```bash
+docker compose exec postgres /opt/okit/seed-catalogue-demo.sh
+```
+
+Le script insère 18 produits actifs et 1 produit désactivé. Il est idempotent :
+il peut être exécuté plusieurs fois sans créer de doublons. Il est réservé aux
+environnements de développement et de démonstration et ne doit pas être lancé
+automatiquement en production.
+
+#### Démarrer Expo Web
+
+Depuis la racine du dépôt :
+
+```bash
+cd apps/mobile-client
+npm ci
+npm run web
+```
+
+Ouvrir ensuite [http://localhost:19006](http://localhost:19006) dans le
+navigateur. L'utilisateur peut créer un compte ou se connecter via Keycloak,
+puis consulter le catalogue. Le serveur Expo doit rester actif dans son
+terminal pendant toute l'utilisation de l'application.
+
 ## 6. Première installation de l'application sur le téléphone Android
 
 **Cette section n'est nécessaire que si O'Kit n'est pas encore installé, ou si un changement natif exige un nouveau build.**

@@ -12,8 +12,12 @@ reprendre lors de l'intégration finale, sans effectuer de merge ni de rebase ic
 - conserver les étapes communes `lint -> test -> build -> scan -> deploy` ;
 - ne pas déployer si les tests, scans ou validations de manifests échouent.
 
-Aucun fichier de pipeline CI n'est présent sur cette branche. Ces changements
-de chemins devront donc être appliqués au pipeline commun au moment de la fusion.
+Le pipeline commun est présent sur cette branche. Il exécute actuellement les
+tests du Catalogue selon les chemins modifiés. La vérification de disponibilité
+Kubernetes `k8s-check` est manuelle dans les pipelines lancés depuis l'interface
+GitLab ou sur `main` ; elle n'est pas ajoutée aux pipelines de Merge Request.
+Le job de test du service Utilisateur et ses chemins devront être ajoutés au
+pipeline commun au moment de l'intégration finale.
 
 ## Contrats et consommateurs
 

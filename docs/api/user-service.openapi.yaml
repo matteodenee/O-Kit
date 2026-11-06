@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: O'kit User Service API
-  version: 0.3.0
-  description: API du profil métier et des adresses de l'acheteur authentifié. Le rôle realm Keycloak BUYER est obligatoire.
+  version: 0.4.0
+  description: API du profil métier, des adresses et de la wishlist de l'acheteur authentifié. Le rôle realm Keycloak BUYER est obligatoire.
 servers:
   - url: http://localhost:8081
     description: Développement local direct
@@ -218,6 +218,56 @@ paths:
           $ref: "#/components/responses/AddressNotFound"
         "409":
           $ref: "#/components/responses/AddressConflict"
+  /api/v1/users/me/wishlist:
+    get:
+      operationId: listCurrentUserWishlist
+      summary: Lister les produits favoris de l'utilisateur authentifié
+      responses:
+        "200":
+          description: Favoris triés du plus récent au plus ancien
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WishlistItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/users/me/wishlist/{productId}:
+    parameters:
+      - $ref: "#/components/parameters/ProductId"
+    put:
+      operationId: addCurrentUserWishlistProduct
+      summary: Ajouter un produit à la wishlist de manière idempotente
+      responses:
+        "204":
+          description: Produit présent dans la wishlist
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Le profil métier doit être créé avant la wishlist
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+    delete:
+      operationId: removeCurrentUserWishlistProduct
+      summary: Retirer un produit de la wishlist de manière idempotente
+      responses:
+        "204":
+          description: Produit absent de la wishlist
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 components:
   securitySchemes:
     bearerAuth:
@@ -248,6 +298,15 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
   parameters:
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      description: Identifiant stable du produit Catalogue
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
     AddressId:
       name: addressId
       in: path
@@ -257,6 +316,20 @@ components:
         type: string
         format: uuid
   schemas:
+    WishlistItem:
+      type: object
+      additionalProperties: false
+      required:
+        - productId
+        - addedAt
+      properties:
+        productId:
+          type: integer
+          format: int64
+          minimum: 1
+        addedAt:
+          type: string
+          format: date-time
     UpdateUserProfile:
       type: object
       additionalProperties: false

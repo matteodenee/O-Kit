@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://okit.local/events/product-status-changed.v1.schema.json",
+  "title": "product.status.changed.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "occurredAt", "productId", "previousStatus", "newStatus"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "productId": { "type": "integer", "format": "int64", "minimum": 1 },
+    "previousStatus": { "type": "string", "enum": ["ACTIF", "DESACTIVE"] },
+    "newStatus": { "type": "string", "enum": ["ACTIF", "DESACTIVE"] }
+  }
+}

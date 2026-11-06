@@ -19,6 +19,10 @@ token courant.
   `/api/v1/users/me/addresses` ;
 - choisir une seule adresse active par défaut ;
 - masquer logiquement une adresse devenue inutile ;
+- ajouter, lister et retirer des identifiants produit dans la wishlist sous
+  `/api/v1/users/me/wishlist` ;
+- retirer les produits désactivés en consommant l'événement Catalogue
+  `product.status.changed.v1` ;
 - exécuter les migrations PostgreSQL avec Flyway ;
 - exposer `/health` et `/metrics` pour l'exploitation.
 
@@ -27,8 +31,8 @@ Le contrat complet se trouve dans
 
 Les adresses appartiennent à `user-service` conformément à l'ADR 0008. Une
 future commande conservera un instantané de livraison sans lire cette base. La
-wishlist attend encore le contrat catalogue. Aucune donnée vendeur n'est
-stockée dans ce service.
+wishlist suit l'ADR 0010 et ne stocke aucune copie de produit. Aucune donnée
+vendeur n'est stockée dans ce service.
 
 ## Prérequis
 
@@ -58,7 +62,7 @@ existante empêchera `user-service` de démarrer.
 ### 2. Démarrer l'environnement utilisateur
 
 ```bash
-docker compose up --build -d keycloak postgres user-service api-gateway
+docker compose up --build -d keycloak postgres rabbitmq catalogue-service user-service api-gateway
 docker compose ps
 ```
 
@@ -86,6 +90,7 @@ Les trois premières commandes doivent réussir. La dernière doit retourner
 | Composant | URL locale | Utilité |
 | --- | --- | --- |
 | Keycloak | `http://localhost:8090` | inscription et connexion |
+| RabbitMQ | `http://localhost:15672` | événements Catalogue vers Utilisateur |
 | user-service | `http://localhost:8081` | diagnostic direct du service |
 | API Gateway | `http://localhost:8080` | point d'entrée des API |
 | Expo Web | `http://localhost:19006` | interface acheteur |

@@ -14,6 +14,7 @@ import com.okit.catalogue.entities.TauxTva;
 import com.okit.catalogue.exceptions.BusinessValidationException;
 import com.okit.catalogue.exceptions.ResourceNotFoundException;
 import com.okit.catalogue.mappers.ProduitMapper;
+import com.okit.catalogue.messaging.ProductStatusChangedEvent;
 import com.okit.catalogue.repositories.EquipeRepository;
 import com.okit.catalogue.repositories.MarqueRepository;
 import com.okit.catalogue.repositories.ProduitRepository;
@@ -21,6 +22,7 @@ import com.okit.catalogue.repositories.SaisonRepository;
 import com.okit.catalogue.repositories.TauxTvaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class ProduitServiceImpl implements ProduitService {
     private final TauxTvaRepository tauxTvaRepository;
     private final EquipeRepository equipeRepository;
     private final ProduitMapper produitMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ProduitServiceImpl(
             ProduitRepository produitRepository,
@@ -43,7 +46,8 @@ public class ProduitServiceImpl implements ProduitService {
             MarqueRepository marqueRepository,
             TauxTvaRepository tauxTvaRepository,
             EquipeRepository equipeRepository,
-            ProduitMapper produitMapper
+            ProduitMapper produitMapper,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.produitRepository = produitRepository;
         this.saisonRepository = saisonRepository;
@@ -51,6 +55,7 @@ public class ProduitServiceImpl implements ProduitService {
         this.tauxTvaRepository = tauxTvaRepository;
         this.equipeRepository = equipeRepository;
         this.produitMapper = produitMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -110,6 +115,7 @@ public class ProduitServiceImpl implements ProduitService {
 
         Produit produit = produitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'identifiant : " + id));
+        ProduitStatut previousStatus = produit.getStatut();
 
         if (updateInput.titre() != null) {
             if (updateInput.titre().isBlank()) {
@@ -153,6 +159,12 @@ public class ProduitServiceImpl implements ProduitService {
         }
 
         Produit saved = produitRepository.save(produit);
+        if (updateInput.statut() != null && previousStatus != updateInput.statut()) {
+            eventPublisher.publishEvent(ProductStatusChangedEvent.create(
+                    saved.getIdProduit(),
+                    previousStatus,
+                    updateInput.statut()));
+        }
         return produitMapper.toDetailDto(saved);
     }
 

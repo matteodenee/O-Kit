@@ -71,4 +71,5 @@ jamais l'historique de commande.
 - validation postale externe, géocodage ou normalisation par pays ;
 - restauration d'une adresse masquée ;
 - adresse d'une commande ou intégration au service commande ;
-- wishlist, qui attend le contrat d'identification du catalogue.
+- wishlist, documentée séparément dans
+  [`user-wishlist.md`](user-wishlist.md).

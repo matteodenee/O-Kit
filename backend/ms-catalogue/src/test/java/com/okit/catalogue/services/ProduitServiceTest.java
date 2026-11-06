@@ -18,6 +18,7 @@ import com.okit.catalogue.entities.TauxTva;
 import com.okit.catalogue.exceptions.BusinessValidationException;
 import com.okit.catalogue.exceptions.ResourceNotFoundException;
 import com.okit.catalogue.mappers.ProduitMapper;
+import com.okit.catalogue.messaging.ProductStatusChangedEvent;
 import com.okit.catalogue.repositories.EquipeRepository;
 import com.okit.catalogue.repositories.MarqueRepository;
 import com.okit.catalogue.repositories.ProduitRepository;
@@ -28,8 +29,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -45,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -67,6 +71,9 @@ class ProduitServiceTest {
 
     @Mock
     private ProduitMapper produitMapper;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ProduitServiceImpl produitService;
@@ -345,6 +352,26 @@ class ProduitServiceTest {
         assertThat(produit.getEstFlocable()).isFalse();
         assertThat(produit.getStatut()).isEqualTo(ProduitStatut.DESACTIVE);
         verify(produitRepository).save(produit);
+        ArgumentCaptor<ProductStatusChangedEvent> eventCaptor =
+                ArgumentCaptor.forClass(ProductStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().productId()).isEqualTo(10L);
+        assertThat(eventCaptor.getValue().previousStatus()).isEqualTo(ProduitStatut.ACTIF);
+        assertThat(eventCaptor.getValue().newStatus()).isEqualTo(ProduitStatut.DESACTIVE);
+    }
+
+    @Test
+    @DisplayName("updateProduct : ne publie pas d'événement quand le statut reste identique")
+    void shouldNotPublishEventWhenStatusIsUnchanged() {
+        ProduitUpdateInputDto updateDto = new ProduitUpdateInputDto(
+                null, null, null, null, null, null, null, ProduitStatut.ACTIF);
+        when(produitRepository.findById(10L)).thenReturn(Optional.of(produit));
+        when(produitRepository.save(produit)).thenReturn(produit);
+        when(produitMapper.toDetailDto(produit)).thenReturn(detailDto);
+
+        produitService.updateProduct(10L, updateDto);
+
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test

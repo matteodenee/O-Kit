@@ -11,6 +11,24 @@ services:
       - mailpit_data:/data
     mem_limit: 128m
 
+  rabbitmq:
+    image: rabbitmq:4.1-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-okit}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-change-me-local-only}
+    ports:
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: 384m
+
   keycloak:
     build:
       context: ./infra/keycloak
@@ -63,6 +81,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       USER_DB_HOST: ${USER_DB_HOST:-postgres}
       USER_DB_PORT: ${USER_DB_PORT:-5432}
@@ -71,6 +91,11 @@ services:
       USER_DB_PASSWORD: ${USER_DB_PASSWORD:?Define USER_DB_PASSWORD in .env}
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+      WISHLIST_MESSAGING_ENABLED: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-okit}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-me-local-only}
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:
@@ -88,11 +113,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${CATALOGUE_DB_NAME:-okit_catalogue}
       SPRING_DATASOURCE_USERNAME: ${CATALOGUE_DB_USERNAME:-okit_catalogue}
       SPRING_DATASOURCE_PASSWORD: ${CATALOGUE_DB_PASSWORD:?Define CATALOGUE_DB_PASSWORD in .env}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      CATALOGUE_MESSAGING_ENABLED: "true"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-okit}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-change-me-local-only}
     expose:
       - "8082"
     healthcheck:
@@ -133,3 +165,4 @@ volumes:
   keycloak_data:
   mailpit_data:
   postgres_data:
+  rabbitmq_data:

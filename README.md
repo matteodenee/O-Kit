@@ -26,8 +26,9 @@ Le MVP d'authentification et de profil de `user-service` est terminé :
 La tranche adresses appartient également à `user-service` : un acheteur peut
 enregistrer plusieurs adresses internationales, choisir celle par défaut et
 masquer celles qu'il n'utilise plus depuis l'application Expo ou son aperçu
-web. La wishlist reste différée jusqu'à stabilisation des identifiants définis
-par le domaine catalogue.
+web. Le backend de wishlist permet aussi d'enregistrer des identifiants produit
+et retire automatiquement un favori lorsque Catalogue désactive le produit ;
+l'interface wishlist sera ajoutée dans une tranche frontend ultérieure.
 
 ## Architecture livrée
 
@@ -36,7 +37,8 @@ par le domaine catalogue.
 | Keycloak | Identités, rôles et parcours OIDC | `http://localhost:8090` |
 | Mailpit | Courriels de développement | `http://localhost:8025` |
 | PostgreSQL | Instance locale mutualisable, base logique `okit_users` | `localhost:5432` |
-| `user-service` | Profil et adresses de l'acheteur | `http://localhost:8081` |
+| RabbitMQ | Événements métier interservices | `http://localhost:15672` |
+| `user-service` | Profil, adresses et wishlist de l'acheteur | `http://localhost:8081` |
 | `catalogue-service` | Catalogue des produits | accès interne `catalogue-service:8082` |
 | `api-gateway` | Entrée des API | `http://localhost:8080` |
 | Client Expo | Application acheteur | `http://localhost:19006` |

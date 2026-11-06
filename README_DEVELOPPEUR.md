@@ -2,7 +2,7 @@
 
 > **But : copier-coller les commandes de ce guide pour utiliser O'Kit sur un téléphone Android physique et ouvrir le site vendeur.**
 >
-> **Configuration de référence validée le 2 novembre 2026 :** API Gateway **8080**, microservice Utilisateur **8081**, Keycloak **8090**, Expo/Metro **19006**, PostgreSQL **5432**, Mailpit **8025**, backoffice vendeur **5173**. **Ne pas réutiliser les anciennes instructions qui indiquent Metro 8081, Keycloak 8080 ou Gateway 8083.**
+> **Configuration de référence validée le 2 novembre 2026 :** API Gateway **8080**, microservice Utilisateur **8081**, Keycloak **8090**, Expo/Metro **19006**, PostgreSQL **5432**, Mailpit **8025**, RabbitMQ **15672** (interface d'administration), backoffice vendeur **5173**. **Ne pas réutiliser les anciennes instructions qui indiquent Metro 8081, Keycloak 8080 ou Gateway 8083.**
 >
 > Guide fondé sur le parcours Android effectivement réalisé avec succès. Les commandes du backoffice reposent sur la documentation du dépôt disponible ; le parcours vendeur n'a pas été retesté dans cette session. Les ports et scripts doivent rester cohérents avec la branche réellement utilisée.
 
@@ -26,13 +26,15 @@ rôle, ni donnée vendeur.
 | Expo / Metro | `http://127.0.0.1:19006` | `adb reverse tcp:19006 tcp:19006` |
 | PostgreSQL | `localhost:5432` | Pas d'accès direct depuis Android |
 | Mailpit | `http://localhost:8025` | Accessible dans le navigateur du PC |
+| RabbitMQ | `http://localhost:15672` | Accessible dans le navigateur du PC |
 | Backoffice vendeur | `http://localhost:5173` | Site à ouvrir dans le navigateur du PC |
 
 **Important :** `localhost` désigne normalement le téléphone **quand le code tourne sur Android**. Les commandes `adb reverse` font fonctionner ces mêmes URL en redirigeant le trafic vers le PC **tant que la connexion USB est active**. Cette procédure n'est pas une procédure « Wi-Fi sans câble ».
 
 Les adresses internationales sont gérées dans une table dédiée, avec une seule
-adresse active par défaut et un archivage logique. La wishlist reste différée
-jusqu'à la définition du contrat d'identification des produits du catalogue.
+adresse active par défaut et un archivage logique. Le backend de wishlist
+stocke les identifiants produits du Catalogue ; son interface acheteur sera
+développée ultérieurement.
 
 ## 2. Préparation du PC — à faire une seule fois
 

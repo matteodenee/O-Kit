@@ -32,9 +32,9 @@ rôle, ni donnée vendeur.
 **Important :** `localhost` désigne normalement le téléphone **quand le code tourne sur Android**. Les commandes `adb reverse` font fonctionner ces mêmes URL en redirigeant le trafic vers le PC **tant que la connexion USB est active**. Cette procédure n'est pas une procédure « Wi-Fi sans câble ».
 
 Les adresses internationales sont gérées dans une table dédiée, avec une seule
-adresse active par défaut et un archivage logique. Le backend de wishlist
-stocke les identifiants produits du Catalogue ; son interface acheteur sera
-développée ultérieurement.
+adresse active par défaut et un archivage logique. La wishlist stocke les
+identifiants produits du Catalogue et l'application acheteur les enrichit avec
+les informations Catalogue actuelles.
 
 ## 2. Préparation du PC — à faire une seule fois
 

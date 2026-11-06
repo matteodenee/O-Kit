@@ -26,9 +26,9 @@ Le MVP d'authentification et de profil de `user-service` est terminé :
 La tranche adresses appartient également à `user-service` : un acheteur peut
 enregistrer plusieurs adresses internationales, choisir celle par défaut et
 masquer celles qu'il n'utilise plus depuis l'application Expo ou son aperçu
-web. Le backend de wishlist permet aussi d'enregistrer des identifiants produit
-et retire automatiquement un favori lorsque Catalogue désactive le produit ;
-l'interface wishlist sera ajoutée dans une tranche frontend ultérieure.
+web. La wishlist permet aussi d'enregistrer des produits favoris depuis le
+Catalogue, de les retrouver dans une page dédiée et de retirer automatiquement
+un favori lorsque Catalogue désactive le produit.
 
 ## Architecture livrée
 

@@ -62,7 +62,8 @@ deviendraient rapidement obsolètes.
 - aucune clé étrangère cross-service n'est créée ;
 - un identifiant inexistant peut être enregistré si un client contourne le
   parcours normal ; il sera inutilisable lors de l'enrichissement Catalogue ;
-- la future interface devra charger les détails depuis Catalogue ;
+- l'interface acheteur charge les détails courants depuis Catalogue et ne les
+  copie pas dans `user-service` ;
 - l'événement est versionné et documenté ;
 - la livraison RabbitMQ intervient après commit. Les reprises de publication
   couvrent les indisponibilités transitoires ; une stratégie outbox pourra être

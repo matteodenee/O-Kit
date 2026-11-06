@@ -16,6 +16,24 @@ produits.
 5. lorsqu'un vendeur désactive un produit, Catalogue publie un événement ;
 6. le service Utilisateur retire ce produit de toutes les wishlists.
 
+## Parcours frontend acheteur
+
+1. le Catalogue charge en parallèle les produits actifs et les identifiants
+   déjà présents dans la wishlist ;
+2. chaque carte produit indique si le produit est favori ;
+3. l'acheteur ajoute ou retire un favori sans quitter le Catalogue ;
+4. un accès « Mes favoris » ouvre une page dédiée ;
+5. cette page enrichit chaque identifiant avec les données courantes du
+   Catalogue, sans les persister dans le service Utilisateur ;
+6. un produit momentanément introuvable reste retirable et est présenté comme
+   indisponible jusqu'à la synchronisation asynchrone ;
+7. si le profil métier n'existe pas encore, l'ajout guide l'acheteur vers la
+   page de profil.
+
+L'interface gère explicitement les états chargement, erreur, liste vide et
+mutation en cours. Elle utilise la Gateway et le token Keycloak courant pour
+les deux microservices.
+
 ## Règles métier
 
 - seul un JWT portant exclusivement le rôle `BUYER` accède à la wishlist ;
@@ -39,3 +57,9 @@ produits.
 - un événement `DESACTIVE` retire toutes les occurrences du produit ;
 - un événement `ACTIF` ne modifie aucune wishlist ;
 - un message invalide ou durablement non traitable rejoint la DLQ.
+- le Catalogue affiche l'état favori et permet de le modifier immédiatement ;
+- la page « Mes favoris » affiche les données Catalogue actuelles ;
+- un échec réseau ne modifie pas visuellement la wishlist comme si l'opération
+  avait réussi ;
+- une mutation déjà en cours pour un produit ne peut pas être déclenchée une
+  seconde fois.

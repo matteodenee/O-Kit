@@ -13,6 +13,11 @@ test('an authenticated buyer is redirected to the catalogue route', async () => 
   assert.match(homeRoute, /accessToken\s*&&\s*profile\s*!==\s*['"]1['"]/u);
   assert.match(homeRoute, /<Redirect\s+href=["']\/catalogue["']/u);
   assert.match(catalogueRoute, /getActiveProducts\(authenticatedFetch\)/u);
+  assert.match(catalogueRoute, /listWishlist\(authenticatedFetch\)/u);
+  assert.match(catalogueRoute, /WishlistApiError\s*&&\s*wishlistError\.status\s*===\s*409/u);
+  assert.match(catalogueRoute, /toggleFavorite\(product\.id\)/u);
+  assert.match(catalogueRoute, /Ajouter .* aux favoris/u);
+  assert.match(catalogueRoute, /Retirer .* des favoris/u);
   assert.match(catalogueRoute, /Aucun produit actif/u);
   assert.match(catalogueRoute, /Réessayer/u);
 });
@@ -25,6 +30,7 @@ test('profile and address screens expose explicit catalogue navigation', async (
   assert.match(profileRoute, /Retour au catalogue/u);
   assert.match(addressesRoute, /href=["']\/catalogue["']/u);
   assert.match(addressesRoute, /href=["']\/\?profile=1["']/u);
+  assert.match(addressesRoute, /href=["']\/wishlist["']/u);
 });
 
 test('the catalogue API uses the authenticated gateway product endpoint', async () => {

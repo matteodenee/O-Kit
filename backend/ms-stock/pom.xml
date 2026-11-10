@@ -203,6 +203,17 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Configuration Surefire pour forcer l'API Docker sous Linux -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <environmentVariables>
+                        <DOCKER_API_VERSION>1.41</DOCKER_API_VERSION>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 </project>

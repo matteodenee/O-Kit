@@ -1,4 +1,43 @@
 services:
+  stock-db:
+    image: postgres:16-alpine
+    container_name: okit-stock-db
+    environment:
+      POSTGRES_DB: okit_stock_db
+      POSTGRES_USER: okit_stock
+      POSTGRES_PASSWORD: okit_stock_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - stock_db_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-stock-db.sql:/docker-entrypoint-initdb.d/init-stock-db.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U okit_stock -d okit_stock_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservice Stock
+  stock-service:
+    build:
+      context: ./services/ms-stock
+      dockerfile: Dockerfile
+    container_name: okit-ms-stock
+    environment:
+      - SERVER_PORT=8083
+      - DB_URL=jdbc:postgresql://stock-db:5432/okit_stock_db
+      - DB_USERNAME=okit_stock
+      - DB_PASSWORD=okit_stock_password
+      - OIDC_ISSUER_URI=http://keycloak:8080/realms/okit
+      - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+    ports:
+      - "8083:8083"
+    depends_on:
+      stock-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
   mailpit:
     image: axllent/mailpit:v1.31.5
     restart: unless-stopped
@@ -115,6 +154,7 @@ services:
     environment:
       USER_SERVICE_URL: http://user-service:8081
       CATALOGUE_SERVICE_URL: http://catalogue-service:8082
+      STOCK_SERVICE_URL: http://stock-service:8083
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
       CORS_ALLOWED_ORIGIN: http://localhost:19006
@@ -133,3 +173,4 @@ volumes:
   keycloak_data:
   mailpit_data:
   postgres_data:
+  stock_db_data:

@@ -51,5 +51,4 @@ public record ProduitInputDto(
                 this(titre, description, prixDeBase, poids, couleursPrincipales, impactEnvi,
                         estFlocable, statut, idSaison, idMarque, idTauxTVA, idEquipe, null);
         }
-) {
 }

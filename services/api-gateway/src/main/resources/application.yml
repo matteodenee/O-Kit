@@ -33,11 +33,11 @@ spring:
                 - Path=/api/v1/products/**
                 - Method=POST,PATCH
             - id: ms-stock-public
-              uri: lb://ms-stock
+              uri: ${STOCK_SERVICE_URL:http://localhost:8083}
               predicates:
                   - Path=/api/v1/stocks/**
             - id: ms-stock-seller
-              uri: lb://ms-stock
+              uri: ${STOCK_SERVICE_URL:http://localhost:8083}
               predicates:
                   - Path=/api/v1/seller/**
           globalcors:

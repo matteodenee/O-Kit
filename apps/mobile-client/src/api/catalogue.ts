@@ -51,14 +51,3 @@ export type VariantStockStatus = {
   status: StockStatusType;
   availableQuantity?: number;
 };
-
-export async function getStockStatuses(
-    authenticatedFetch: AuthenticatedFetch,
-    variantIds: number[]
-): Promise<VariantStockStatus[]> {
-  if (variantIds.length === 0) return [];
-  const query = variantIds.map(id => `variantIds=${id}`).join('&');
-  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/stocks?${query}`);
-  if (!response.ok) throw new Error(`Erreur stock: ${response.status}`);
-  return response.json() as Promise<VariantStockStatus[]>;
-}

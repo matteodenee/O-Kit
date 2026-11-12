@@ -20,7 +20,7 @@ services:
   # Microservice Stock
   stock-service:
     build:
-      context: ./services/ms-stock
+      context: ./backend/ms-stock
       dockerfile: Dockerfile
     container_name: okit-ms-stock
     environment:

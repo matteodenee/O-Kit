@@ -20,8 +20,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import com.okit.stock.domain.exception.NotFoundException;
+import com.okit.stock.persistence.entity.Notification;
+import com.okit.stock.persistence.repository.IdempotentRequestRepository;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class StockServiceTest extends AbstractIntegrationTest {
+
+    @Autowired
+    private IdempotentRequestRepository idempotentRepository;
+
+    @BeforeEach
+    void cleanDb() {
+        idempotentRepository.deleteAll();
+        notificationRepository.deleteAll();
+        movementRepository.deleteAll();
+        stockRepository.deleteAll();
+    }
 
     @Autowired
     private StockService stockService;
@@ -34,13 +50,6 @@ class StockServiceTest extends AbstractIntegrationTest {
 
     @Autowired
     private NotificationRepository notificationRepository;
-
-    @BeforeEach
-    void cleanDb() {
-        notificationRepository.deleteAll();
-        movementRepository.deleteAll();
-        stockRepository.deleteAll();
-    }
 
     @Test
     @DisplayName("Décrémentation nominale + rejeu idempotent")
@@ -116,5 +125,86 @@ class StockServiceTest extends AbstractIntegrationTest {
 
         assertThat(successCount.get()).isEqualTo(3);
         assertThat(stockRepository.findByIdVariante(200L).orElseThrow().getStockActuel()).isEqualTo(1);
+    }
+    private void decrement(String orderId, long variantId, int qty) {
+        StockService.Outcome o = stockService.decrement(
+                new OrderStockRequest(orderId, List.of(new OrderLine(variantId, qty))));
+        assertThat(o.status()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("Alerte unique au franchissement du seuil, réarmée après réapprovisionnement")
+    void testSingleAlertOnCrossingAndRearm() {
+        stockService.create(new CreateStockRequest(300L, 20, 10));
+
+        decrement("ALERT-1", 300L, 5);   // 15 : au-dessus du seuil
+        assertThat(notificationRepository.count()).isZero();
+
+        decrement("ALERT-2", 300L, 7);   // 8 : franchissement -> 1 notification
+        assertThat(notificationRepository.count()).isEqualTo(1);
+        assertThat(notificationRepository.findAll().get(0).getType())
+                .isEqualTo(Notification.Type.LOW_STOCK);
+
+        decrement("ALERT-3", 300L, 2);   // 6 : toujours sous le seuil -> pas de doublon
+        assertThat(notificationRepository.count()).isEqualTo(1);
+
+        stockService.restock(300L, 10);  // 16 : alerte réarmée
+        assertThat(stockRepository.findByIdVariante(300L).orElseThrow().isAlertActive()).isFalse();
+
+        decrement("ALERT-4", 300L, 8);   // 8 : nouveau franchissement
+        assertThat(notificationRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Passage à zéro : notification OUT_OF_STOCK même si l'alerte stock bas est déjà active")
+    void testOutOfStockNotification() {
+        stockService.create(new CreateStockRequest(500L, 3, 10)); // déjà sous le seuil, sans notification
+        assertThat(notificationRepository.count()).isZero();
+
+        decrement("OOS-1", 500L, 1);     // 2 : alerte déjà active, pas de nouvelle notification
+        assertThat(notificationRepository.count()).isZero();
+
+        decrement("OOS-2", 500L, 2);     // 0 : rupture
+        assertThat(notificationRepository.count()).isEqualTo(1);
+        assertThat(notificationRepository.findAll().get(0).getType())
+                .isEqualTo(Notification.Type.OUT_OF_STOCK);
+    }
+
+    @Test
+    @DisplayName("Release : ré-incrémente, rejeu sans double effet, clé distincte de decrement")
+    void testReleaseAndReplay() {
+        stockService.create(new CreateStockRequest(400L, 10, 2));
+        OrderStockRequest req = new OrderStockRequest("ORDER-R1", List.of(new OrderLine(400L, 4)));
+
+        assertThat(stockService.decrement(req).status()).isEqualTo(200);
+        assertThat(stockRepository.findByIdVariante(400L).orElseThrow().getStockActuel()).isEqualTo(6);
+
+        StockService.Outcome released = stockService.release(req);
+        assertThat(released.status()).isEqualTo(200);
+        assertThat(released.body()).contains("RELEASED").contains("ORDER-R1");
+        assertThat(stockRepository.findByIdVariante(400L).orElseThrow().getStockActuel()).isEqualTo(10);
+
+        // rejeu du release : aucun nouvel effet
+        assertThat(stockService.release(req).status()).isEqualTo(200);
+        assertThat(stockRepository.findByIdVariante(400L).orElseThrow().getStockActuel()).isEqualTo(10);
+        assertThat(movementRepository.count()).isEqualTo(3); // INITIAL + ORDER_PAID + ORDER_CANCELLED
+
+        // rejeu du decrement après release : renvoie la réponse mémorisée, ne re-décrémente pas
+        assertThat(stockService.decrement(req).status()).isEqualTo(200);
+        assertThat(stockRepository.findByIdVariante(400L).orElseThrow().getStockActuel()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("Release avec une variante inconnue : 404 et aucun effet partiel")
+    void testReleaseUnknownVariant() {
+        stockService.create(new CreateStockRequest(401L, 10, 2));
+
+        OrderStockRequest req = new OrderStockRequest("ORDER-R2", List.of(
+                new OrderLine(401L, 3),
+                new OrderLine(999L, 1)));
+
+        assertThatThrownBy(() -> stockService.release(req)).isInstanceOf(NotFoundException.class);
+        assertThat(stockRepository.findByIdVariante(401L).orElseThrow().getStockActuel()).isEqualTo(10);
+        assertThat(idempotentRepository.count()).isZero(); // l'échec n'est pas mémorisé
     }
 }

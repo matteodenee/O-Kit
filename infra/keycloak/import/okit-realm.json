@@ -28,6 +28,10 @@
       {
         "name": "SELLER",
         "description": "Employé O'kit autorisé à utiliser le backoffice vendeur"
+      },
+      {
+        "name": "SVC_COMMANDE",
+        "description": "Compte de service de ms-commande (appels internes vers ms-stock)"
       }
     ]
   },
@@ -121,9 +125,44 @@
           "config": {}
         }
       ]
+    },
+    {
+      "clientId": "ms-commande",
+      "name": "ms-commande (service)",
+      "description": "Client confidentiel machine-à-machine : ms-commande appelle ms-stock /internal",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "ms-commande-dev-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "roles"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-ms-commande",
+      "enabled": true,
+      "serviceAccountClientId": "ms-commande",
+      "realmRoles": [
+        "SVC_COMMANDE"
+      ]
     }
   ],
   "scopeMappings": [
+    {
+      "client": "ms-commande",
+      "roles": [
+        "SVC_COMMANDE"
+      ]
+    },
     {
       "client": "okit-mobile",
       "roles": [

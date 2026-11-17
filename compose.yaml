@@ -38,6 +38,48 @@ services:
       keycloak:
         condition: service_started
 
+  commande-db:
+    image: postgres:16-alpine
+    container_name: okit-commande-db
+    environment:
+      POSTGRES_DB: okit_commande_db
+      POSTGRES_USER: okit_commande
+      POSTGRES_PASSWORD: okit_commande_password
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - commande_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U okit_commande -d okit_commande_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservice Commande / Panier / Flocage
+  commande-service:
+    build:
+      context: ./backend/ms-commande
+    container_name: okit-ms-commande
+    environment:
+      - SERVER_PORT=8085
+      - DB_URL=jdbc:postgresql://commande-db:5432/okit_commande_db
+      - DB_USERNAME=okit_commande
+      - DB_PASSWORD=okit_commande_password
+      - OIDC_ISSUER_URI=http://localhost:8090/realms/okit
+      - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+      - OIDC_TOKEN_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/token
+      - STOCK_CLIENT_ID=ms-commande
+      - STOCK_CLIENT_SECRET=${COMMANDE_CLIENT_SECRET:-ms-commande-dev-secret}
+      - CATALOGUE_SERVICE_URL=http://catalogue-service:8082
+      - STOCK_SERVICE_URL=http://stock-service:8083
+    ports:
+      - "127.0.0.1:8085:8085"
+    depends_on:
+      commande-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
   mailpit:
     image: axllent/mailpit:v1.31.5
     restart: unless-stopped
@@ -155,6 +197,7 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       CATALOGUE_SERVICE_URL: http://catalogue-service:8082
       STOCK_SERVICE_URL: http://stock-service:8083
+      COMMANDE_SERVICE_URL: http://commande-service:8085
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
       CORS_ALLOWED_ORIGIN: http://localhost:19006
@@ -174,3 +217,4 @@ volumes:
   mailpit_data:
   postgres_data:
   stock_db_data:
+  commande_db_data:

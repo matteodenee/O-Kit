@@ -46,6 +46,37 @@ export async function getActiveProducts(authenticatedFetch: AuthenticatedFetch) 
   return response.json() as Promise<ProductPage>;
 }
 
+export type Taille = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+export const ORDRE_TAILLES: Taille[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+export type ProductDetail = {
+  id: number;
+  titre: string;
+  description: string | null;
+  prixDeBaseHT: number;
+  prixTTC: number;
+  prixApresPromotionTTC: number | null;
+  couleursPrincipales: string | null;
+  estFlocable: boolean | null;
+  enStock: boolean;
+  statut: 'ACTIF' | 'DESACTIVE';
+  marque: { nomMarque?: string } | null;
+  saison: { nom?: string } | null;
+  equipe: { nom?: string } | null;
+  tauxTva: number;
+  variantes: { id: number; taille: Taille }[];
+};
+
+export async function getProduct(authenticatedFetch: AuthenticatedFetch, id: number) {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/products/${id}`);
+  if (!response.ok) {
+    throw response.status === 404
+      ? new Error('Ce maillot est introuvable.')
+      : new CatalogueApiError(response.status);
+  }
+  return response.json() as Promise<ProductDetail>;
+}
+
 export type VariantStockStatus = {
   variantId: number;
   status: StockStatusType;

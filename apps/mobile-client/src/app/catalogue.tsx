@@ -95,6 +95,12 @@ export default function CatalogueScreen() {
         <Link href="/addresses" style={styles.navigationLink}>
           Mes adresses
         </Link>
+        <Link href="/commandes" style={styles.navigationLink}>
+          Mes commandes
+        </Link>
+        <Link href="/panier" style={[styles.navigationLink, styles.cartLink]}>
+          Mon panier
+        </Link>
       </View>
 
       {state === 'loading' ? (
@@ -123,7 +129,11 @@ export default function CatalogueScreen() {
       {state === 'ready' && products.length > 0 ? (
         <View style={styles.grid}>
           {products.map((product) => (
-            <View key={product.id} style={styles.card}>
+            <Link asChild href={`/produit/${product.id}`} key={product.id}>
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+            >
               <Text style={styles.cardBrand}>{product.nomMarque ?? 'O’kit'}</Text>
               <Text style={styles.cardTitle}>{product.titre}</Text>
               <Text style={styles.cardMeta}>
@@ -135,7 +145,8 @@ export default function CatalogueScreen() {
                   {product.enStock ? 'En stock' : 'Indisponible'}
                 </Text>
               </View>
-            </View>
+            </Pressable>
+            </Link>
           ))}
         </View>
       ) : null}
@@ -151,7 +162,9 @@ const styles = StyleSheet.create({
   title: { color: '#1f2925', fontSize: 38, fontWeight: '800' },
   subtitle: { color: '#655f57', marginTop: 6 },
   logout: { color: '#9f3e27', fontWeight: '700', paddingVertical: 8 },
-  navigation: { flexDirection: 'row', gap: 12 },
+  navigation: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  cartLink: { backgroundColor: '#c95f2b', color: '#fff' },
+  cardPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   navigationLink: { color: '#1f2925', fontWeight: '700', backgroundColor: '#fff', padding: 12, borderRadius: 10 },
   statePanel: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', gap: 12 },
   stateTitle: { color: '#1f2925', fontSize: 20, fontWeight: '800' },

@@ -5,6 +5,8 @@ import com.okit.commande.api.dto.Requetes.Adresse;
 import com.okit.commande.api.dto.Requetes.ChangerStatut;
 import com.okit.commande.api.dto.Requetes.ModifierCommande;
 import com.okit.commande.api.dto.Requetes.ValiderCommande;
+import com.okit.commande.client.CatalogueClient;
+import com.okit.commande.client.CatalogueClient.ProduitCatalogue;
 import com.okit.commande.client.PaiementClient;
 import com.okit.commande.client.PaiementClient.ResultatPaiement;
 import com.okit.commande.client.StockClient;
@@ -32,8 +34,14 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -41,6 +49,7 @@ import java.util.Objects;
 public class CommandeService {
 
     private final CommandeRepository commandeRepository;
+    private final CatalogueClient catalogueClient;
     private final StockClient stockClient;
     private final PaiementClient paiementClient;
     private final TransactionTemplate transaction;
@@ -48,7 +57,11 @@ public class CommandeService {
 
     /** Ce qu'on retient du panier entre les étapes de la validation. */
     private record Preparation(Long idCommande, Long version, String reference,
-                               BigDecimal totalTtc, List<LigneStock> lignes) {
+                               BigDecimal totalTtc, List<LigneStock> lignes, boolean prixModifies) {
+
+        static Preparation aRevoir() {
+            return new Preparation(null, null, null, null, List.of(), true);
+        }
     }
 
     // ================================================================= ACHETEUR
@@ -56,6 +69,7 @@ public class CommandeService {
     /**
      * Valide le panier : PANIER -> CONFIRMEE.
      * <ol>
+     *   <li>relit le catalogue : produit encore vendu ? prix et TVA à jour ? (le prix est celui de l'achat)</li>
      *   <li>enregistre l'adresse et une référence unique pour ms-stock (transaction courte)</li>
      *   <li>paiement (appel bloquant à ms-paiement)</li>
      *   <li>décrément du stock (tout ou rien, idempotent) ; si échec -> remboursement</li>
@@ -64,11 +78,18 @@ public class CommandeService {
      * Pas de grosse transaction autour des appels HTTP : on ne bloque pas la base pendant les appels réseau.
      */
     public CommandeDto valider(String idUtilisateur, ValiderCommande demande) {
+        // 0. Relire le catalogue (hors transaction : appels réseau)
+        Map<Long, Optional<ProduitCatalogue>> catalogue = lireCatalogue(idUtilisateur);
+
         // 1. Préparer
         Preparation prep = transaction.execute(status -> {
             Commande panier = commandeRepository.findByIdUtilisateurAndStatut(idUtilisateur, StatutCommande.PANIER)
                     .filter(p -> !p.lignesActives().isEmpty())
                     .orElseThrow(() -> new EtatInvalideException("Votre panier est vide"));
+            if (actualiserDepuisCatalogue(panier, catalogue)) {
+                // Nouveaux prix enregistrés (commit) : l'acheteur doit revoir son total avant de payer
+                return Preparation.aRevoir();
+            }
             panier.setAdresseLivraison(versEntite(demande.adresseLivraison()));
             panier.setFraisLivraison(props.fraisLivraison());
             panier.recalculerTotal();
@@ -76,9 +97,13 @@ public class CommandeService {
             panier.setReferenceStock("CMD-" + panier.getId() + "-" + System.currentTimeMillis());
             panier = commandeRepository.saveAndFlush(panier);
             return new Preparation(panier.getId(), panier.getVersion(), panier.getReferenceStock(),
-                    panier.totalTtc(), versLignesStock(panier.lignesActives()));
+                    panier.totalTtc(), versLignesStock(panier.lignesActives()), false);
         });
         Objects.requireNonNull(prep);
+        if (prep.prixModifies()) {
+            throw new EtatInvalideException(
+                    "Le prix d'au moins un article a changé : vérifiez le nouveau total de votre panier puis validez à nouveau");
+        }
 
         // 2. Payer
         ResultatPaiement paiement = paiementClient.payer(prep.idCommande(), idUtilisateur, prep.totalTtc());
@@ -141,7 +166,7 @@ public class CommandeService {
 
     @Transactional
     public CommandeDto annuler(String idUtilisateur, Long idCommande) {
-        Commande commande = commandeDe(idUtilisateur, idCommande);
+        Commande commande = verrouiller(idCommande, idUtilisateur);
         annulerCommande(commande);
         return CommandeDto.from(commande);
     }
@@ -149,7 +174,7 @@ public class CommandeService {
     /** Annule une ligne : stock ré-incrémenté, remboursement de la ligne, montant total recalculé. */
     @Transactional
     public CommandeDto annulerLigne(String idUtilisateur, Long idCommande, Long idLigne) {
-        Commande commande = commandeDe(idUtilisateur, idCommande);
+        Commande commande = verrouiller(idCommande, idUtilisateur);
         if (!commande.getStatut().estAnnulable()) {
             throw new EtatInvalideException("La commande est déjà expédiée, elle ne peut plus être modifiée");
         }
@@ -189,7 +214,7 @@ public class CommandeService {
 
     @Transactional
     public CommandeDto changerStatut(Long idCommande, ChangerStatut demande) {
-        Commande commande = commandeNonPanier(idCommande);
+        Commande commande = verrouiller(idCommande, null);
         if (demande.statut() == StatutCommande.ANNULEE) {
             annulerCommande(commande);
             return CommandeDto.from(commande);
@@ -223,10 +248,86 @@ public class CommandeService {
                 .orElseThrow(() -> new NotFoundException("Commande " + idCommande + " introuvable"));
     }
 
+    /**
+     * Comme {@link #commandeDe} / {@link #commandeNonPanier}, mais verrouillée jusqu'à la fin de la transaction.
+     * À utiliser avant toute opération qui libère du stock ou rembourse : ces appels externes ne sont pas
+     * annulés par un rollback, il ne faut donc jamais les faire deux fois pour la même commande.
+     *
+     * @param idUtilisateur propriétaire attendu, ou null côté vendeur
+     */
+    private Commande verrouiller(Long idCommande, String idUtilisateur) {
+        return commandeRepository.findByIdPourMiseAJour(idCommande)
+                .filter(c -> c.getStatut() != StatutCommande.PANIER)
+                .filter(c -> idUtilisateur == null || c.getIdUtilisateur().equals(idUtilisateur))
+                .orElseThrow(() -> new NotFoundException("Commande " + idCommande + " introuvable"));
+    }
+
     private Commande commandeNonPanier(Long idCommande) {
         return commandeRepository.findById(idCommande)
                 .filter(c -> c.getStatut() != StatutCommande.PANIER)
                 .orElseThrow(() -> new NotFoundException("Commande " + idCommande + " introuvable"));
+    }
+
+    /** Fiche catalogue de chaque produit du panier ; Optional.empty() si le produit a été supprimé. */
+    private Map<Long, Optional<ProduitCatalogue>> lireCatalogue(String idUtilisateur) {
+        Set<Long> idsProduits = transaction.execute(status ->
+                commandeRepository.findByIdUtilisateurAndStatut(idUtilisateur, StatutCommande.PANIER)
+                        .map(p -> p.lignesActives().stream().map(LigneCommande::getIdProduit)
+                                .collect(Collectors.toSet()))
+                        .orElse(Set.of()));
+        Map<Long, Optional<ProduitCatalogue>> catalogue = new HashMap<>();
+        for (Long idProduit : Objects.requireNonNull(idsProduits)) {
+            try {
+                catalogue.put(idProduit, Optional.of(catalogueClient.getProduit(idProduit)));
+            } catch (NotFoundException e) {
+                catalogue.put(idProduit, Optional.empty());
+            }
+        }
+        return catalogue;
+    }
+
+    /**
+     * Confronte chaque ligne du panier au catalogue actuel.
+     *
+     * @return true si au moins un prix (article, TVA ou flocage) a été mis à jour
+     * @throws EtatInvalideException si un article n'est plus vendable (produit retiré, taille supprimée,
+     *                               flocage plus proposé) : l'acheteur doit le retirer de son panier
+     */
+    private boolean actualiserDepuisCatalogue(Commande panier, Map<Long, Optional<ProduitCatalogue>> catalogue) {
+        List<String> indisponibles = new ArrayList<>();
+        boolean prixModifies = false;
+        for (LigneCommande ligne : panier.lignesActives()) {
+            if (!catalogue.containsKey(ligne.getIdProduit())) {
+                // Article ajouté pendant la validation (autre onglet) : pas encore vérifié
+                throw new EtatInvalideException("Le panier a été modifié pendant la validation, réessayez");
+            }
+            ProduitCatalogue produit = catalogue.get(ligne.getIdProduit()).orElse(null);
+            boolean vendable = produit != null && produit.estActif()
+                    && produit.variante(ligne.getIdVariante()).isPresent()
+                    && (ligne.getFlocage() == null || produit.flocable());
+            if (!vendable) {
+                indisponibles.add(ligne.getTitreProduit() + " (" + ligne.getTaille() + ")");
+                continue;
+            }
+            if (ligne.getPrixUnitaireHt().compareTo(produit.prixUnitaireHt()) != 0
+                    || ligne.getTauxTva().compareTo(produit.tauxTva()) != 0) {
+                ligne.setPrixUnitaireHt(produit.prixUnitaireHt());
+                ligne.setTauxTva(produit.tauxTva());
+                prixModifies = true;
+            }
+            if (ligne.getFlocage() != null && ligne.getFlocage().getPrix().compareTo(props.prixFlocageHt()) != 0) {
+                ligne.getFlocage().setPrix(props.prixFlocageHt());
+                prixModifies = true;
+            }
+        }
+        if (!indisponibles.isEmpty()) {
+            throw new EtatInvalideException("Ces articles ne sont plus disponibles, retirez-les de votre panier : "
+                    + String.join(", ", indisponibles));
+        }
+        if (prixModifies) {
+            panier.recalculerTotal();
+        }
+        return prixModifies;
     }
 
     private static List<LigneStock> versLignesStock(List<LigneCommande> lignes) {

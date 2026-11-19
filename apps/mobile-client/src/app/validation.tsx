@@ -84,6 +84,10 @@ export default function ValidationScreen() {
       } else {
         setError(orderError instanceof Error ? orderError.message : "La commande n'a pas pu être validée.");
       }
+      // 409 : le serveur a pu mettre à jour les prix du panier, on réaffiche le total à jour
+      if (orderError instanceof CommandeApiError && orderError.status === 409) {
+        getPanier(authenticatedFetch).then(setPanier).catch(() => undefined);
+      }
     } finally {
       setBusy(false);
     }

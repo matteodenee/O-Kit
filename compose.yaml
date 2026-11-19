@@ -28,7 +28,9 @@ services:
       - DB_URL=jdbc:postgresql://stock-db:5432/okit_stock_db
       - DB_USERNAME=okit_stock
       - DB_PASSWORD=okit_stock_password
-      - OIDC_ISSUER_URI=http://keycloak:8080/realms/okit
+      # Même issuer que les autres services : celui des jetons acheteur/vendeur ET des jetons
+      # de service de ms-commande (Keycloak l'impose via KC_HOSTNAME)
+      - OIDC_ISSUER_URI=http://localhost:8090/realms/okit
       - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
     ports:
       - "8083:8083"
@@ -105,6 +107,11 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Define KEYCLOAK_ADMIN_PASSWORD in .env}
       KC_DB: dev-file
+      # Issuer unique "http://localhost:8090/realms/okit" pour tous les jetons, y compris ceux
+      # demandés depuis le réseau Docker (ms-commande -> http://keycloak:8080, client credentials).
+      # Sans ça, l'issuer dépend de l'URL appelée et ms-stock refuse l'un ou l'autre type de jeton.
+      KC_HOSTNAME: http://localhost:8090
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "127.0.0.1:8090:8080"
     volumes:

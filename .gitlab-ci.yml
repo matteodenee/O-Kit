@@ -13,6 +13,7 @@ k8s-lint:
   script:
     - kubectl kustomize k8s/services/ms-catalogue/
     - kubectl kustomize k8s/services/ms-utilisateur/
+    - kubectl kustomize k8s/services/ms-commande/
     - kubectl kustomize infra/kubernetes/gateway/
     - kubectl kustomize infra/keycloak/
     - kubectl kustomize infra/kubernetes/overlays/user-staging/

@@ -3,6 +3,15 @@ import type { AuthenticatedFetch } from '../auth/AuthProvider';
 
 export type StockStatusType = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 
+export type PriceSort = 'default' | 'prix_asc' | 'prix_desc';
+
+export type CatalogueQueryOptions = {
+  marque?: string | null;
+  saison?: string | null;
+  equipe?: string | null;
+  tri?: PriceSort;
+};
+
 export type ProductSummary = {
   id: number;
   titre: string;
@@ -15,6 +24,7 @@ export type ProductSummary = {
   statut: 'ACTIF' | 'DESACTIVE';
   /** Identifiants des tailles, utilisés pour interroger le stock réel. */
   varianteIds?: number[];
+  photoUrl?: string | null;
 };
 
 export type ProductPage = {
@@ -34,16 +44,26 @@ type ProductReference = {
 export class CatalogueApiError extends Error {
   constructor(public readonly status: number) {
     super(
-      status === 401
-        ? 'Ta session a expiré. Reconnecte-toi.'
-        : `Le catalogue est temporairement indisponible (${status}).`
+        status === 401
+            ? 'Ta session a expiré. Reconnecte-toi.'
+            : `Le catalogue est temporairement indisponible (${status}).`
     );
   }
 }
 
-export async function getActiveProducts(authenticatedFetch: AuthenticatedFetch) {
+export async function getActiveProducts(
+    authenticatedFetch: AuthenticatedFetch,
+    options?: CatalogueQueryOptions
+) {
+  const params = new URLSearchParams();
+  if (options?.marque) params.set('marque', options.marque);
+  if (options?.saison) params.set('saison', options.saison);
+  if (options?.equipe) params.set('club', options.equipe);
+  if (options?.tri && options.tri !== 'default') params.set('tri', options.tri);
+
+  const extraQuery = params.toString();
   const response = await authenticatedFetch(
-    `${apiBaseUrl}/api/v1/products?statut=ACTIF&size=20`
+      `${apiBaseUrl}/api/v1/products?statut=ACTIF&size=20${extraQuery ? `&${extraQuery}` : ''}`
   );
 
   if (!response.ok) {
@@ -78,8 +98,8 @@ export async function getProduct(authenticatedFetch: AuthenticatedFetch, id: num
   const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/products/${id}`);
   if (!response.ok) {
     throw response.status === 404
-      ? new Error('Ce maillot est introuvable.')
-      : new CatalogueApiError(response.status);
+        ? new Error('Ce maillot est introuvable.')
+        : new CatalogueApiError(response.status);
   }
   return response.json() as Promise<ProductDetail>;
 }
@@ -91,11 +111,11 @@ export type VariantStockStatus = {
 };
 
 export async function getProductById(
-  authenticatedFetch: AuthenticatedFetch,
-  productId: number
+    authenticatedFetch: AuthenticatedFetch,
+    productId: number
 ): Promise<ProductDetail | null> {
   const response = await authenticatedFetch(
-    `${apiBaseUrl}/api/v1/products/${encodeURIComponent(productId)}`
+      `${apiBaseUrl}/api/v1/products/${encodeURIComponent(productId)}`
   );
 
   if (response.status === 404) {

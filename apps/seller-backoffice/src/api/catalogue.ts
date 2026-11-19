@@ -17,8 +17,6 @@ export type ProductSummary = {
   nomEquipe: string | null;
   statut: ProductStatus;
   photoUrl?: string | null;
-  /** Identifiants des tailles, pour interroger le stock réel dans ms-stock. */
-  varianteIds?: number[];
 };
 
 export type ProductDetail = {

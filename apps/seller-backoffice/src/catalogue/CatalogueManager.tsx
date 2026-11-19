@@ -9,40 +9,12 @@ import {
   listAllProducts,
   updateProduct,
 } from '../api/catalogue';
-import { listStocks, type StockStatus } from '../api/stock';
 
 type CatalogueManagerProps = {
   request: CatalogueRequest;
 };
 
 type PriceSort = 'default' | 'prix_asc' | 'prix_desc';
-
-/**
- * Niveau de stock d'un produit calculé à partir de ses tailles (ms-stock).
- * Si ms-stock est indisponible, on retombe sur le drapeau Catalogue.
- */
-function resolveStockLevel(
-  product: ProductSummary,
-  stockByVariant: Map<number, StockStatus> | null
-): StockStatus {
-  const varianteIds = product.varianteIds ?? [];
-  if (!stockByVariant || varianteIds.length === 0) {
-    return product.enStock ? 'IN_STOCK' : 'OUT_OF_STOCK';
-  }
-  let hasLowStock = false;
-  for (const varianteId of varianteIds) {
-    const status = stockByVariant.get(varianteId) ?? 'OUT_OF_STOCK';
-    if (status === 'IN_STOCK') return 'IN_STOCK';
-    if (status === 'LOW_STOCK') hasLowStock = true;
-  }
-  return hasLowStock ? 'LOW_STOCK' : 'OUT_OF_STOCK';
-}
-
-function stockLabel(status: StockStatus) {
-  if (status === 'OUT_OF_STOCK') return 'Rupture';
-  if (status === 'LOW_STOCK') return 'Derniers exemplaires';
-  return 'Disponible';
-}
 
 type ProductForm = {
   couleursPrincipales: string;
@@ -89,7 +61,6 @@ function uniqueSorted(values: (string | null | undefined)[]): string[] {
 
 export default function CatalogueManager({ request }: CatalogueManagerProps) {
   const [products, setProducts] = useState<ProductSummary[]>([]);
-  const [stockByVariant, setStockByVariant] = useState<Map<number, StockStatus> | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
   const [form, setForm] = useState<ProductForm | null>(null);
   const [search, setSearch] = useState('');
@@ -107,41 +78,25 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const loadStocks = useCallback(async () => {
-    try {
-      const stocks = await listStocks(request);
-      return new Map(stocks.map((stock) => [stock.variantId, stock.status]));
-    } catch {
-      // ms-stock indisponible : on garde le drapeau produit du Catalogue.
-      return null;
-    }
-  }, [request]);
-
   const loadProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [loadedProducts, stocks] = await Promise.all([
-        listAllProducts(request),
-        loadStocks(),
-      ]);
-      setProducts(loadedProducts);
-      setStockByVariant(stocks);
+      setProducts(await listAllProducts(request));
       setFailedImages({});
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Chargement du catalogue impossible.');
     } finally {
       setLoading(false);
     }
-  }, [request, loadStocks]);
+  }, [request]);
 
   useEffect(() => {
     let active = true;
-    Promise.all([listAllProducts(request), loadStocks()])
-      .then(([loadedProducts, stocks]) => {
+    listAllProducts(request)
+      .then((loadedProducts) => {
         if (active) {
           setProducts(loadedProducts);
-          setStockByVariant(stocks);
           setFailedImages({});
         }
       })
@@ -156,15 +111,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
     return () => {
       active = false;
     };
-  }, [request, loadStocks]);
-
-  const stockLevels = useMemo(() => {
-    const levels = new Map<number, StockStatus>();
-    for (const product of products) {
-      levels.set(product.id, resolveStockLevel(product, stockByVariant));
-    }
-    return levels;
-  }, [products, stockByVariant]);
+  }, [request]);
 
   const brands = useMemo(() => uniqueSorted(products.map((product) => product.nomMarque)), [products]);
   const seasons = useMemo(() => uniqueSorted(products.map((product) => product.nomSaison)), [products]);
@@ -197,9 +144,8 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
         .toLocaleLowerCase('fr');
       const matchesSearch = !normalizedSearch || searchable.includes(normalizedSearch);
       const matchesStatus = statusFilter === 'TOUS' || product.statut === statusFilter;
-      const stockLevel = stockLevels.get(product.id) ?? 'OUT_OF_STOCK';
       const matchesStock = stockFilter === 'TOUS'
-        || (stockFilter === 'EN_STOCK' ? stockLevel !== 'OUT_OF_STOCK' : stockLevel === 'OUT_OF_STOCK');
+        || (stockFilter === 'EN_STOCK' ? product.enStock : !product.enStock);
       const matchesBrand = brandFilter === 'TOUTES' || product.nomMarque === brandFilter;
       const matchesSeason = seasonFilter === 'TOUTES' || product.nomSaison === seasonFilter;
       const matchesTeam = teamFilter === 'TOUS' || product.nomEquipe === teamFilter;
@@ -213,7 +159,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
       return [...filtered].sort((a, b) => b.prixTTC - a.prixTTC);
     }
     return filtered;
-  }, [brandFilter, priceSort, products, search, seasonFilter, statusFilter, stockFilter, stockLevels, teamFilter]);
+  }, [brandFilter, priceSort, products, search, seasonFilter, statusFilter, stockFilter, teamFilter]);
 
   async function selectProduct(id: number) {
     setDetailLoading(true);
@@ -429,7 +375,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
                         <td>{product.nomMarque ?? '—'}</td>
                         <td>{formatPrice(product.prixTTC)}</td>
                         <td><span className={`status-badge ${product.statut.toLowerCase()}`}>{product.statut}</span></td>
-                        <td>{stockLabel(stockLevels.get(product.id) ?? 'OUT_OF_STOCK')}</td>
+                        <td>{product.enStock ? 'Disponible' : 'Rupture'}</td>
                       </tr>
                     );
                   })}
@@ -480,9 +426,9 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
 
               <label><span>Titre *</span><input required value={form.titre} onChange={(event) => setForm({ ...form, titre: event.target.value })} /></label>
               <label>
-                <span>Image du maillot (URL ou data-URI)</span>
+                <span>Image du maillot (URL ou SVG data-URI)</span>
                 <input
-                  placeholder="https://… ou data:image/png;base64,…"
+                  placeholder="https://… ou data:image/svg+xml;utf8,…"
                   value={form.photoUrl}
                   onChange={(event) => {
                     setPreviewFailed(false);

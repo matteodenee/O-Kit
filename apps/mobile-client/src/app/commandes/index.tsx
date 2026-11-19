@@ -1,6 +1,6 @@
 import { Link, Redirect, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Commande, getCommandes } from '../../api/commande';
 import { useAuth } from '../../auth/AuthProvider';
@@ -12,6 +12,20 @@ export default function CommandesScreen() {
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  /** « Tirer pour actualiser » : récupère les statuts mis à jour par le vendeur. */
+  async function actualiser() {
+    setRefreshing(true);
+    try {
+      setCommandes(await getCommandes(authenticatedFetch));
+      setError(null);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Tes commandes sont indisponibles.');
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -47,7 +61,10 @@ export default function CommandesScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={ui.page}>
+    <ScrollView
+      contentContainerStyle={ui.page}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void actualiser()} />}
+    >
       <View style={ui.container}>
         <View style={ui.header}>
           <View style={ui.headerCopy}>

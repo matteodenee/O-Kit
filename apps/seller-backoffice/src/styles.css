@@ -145,6 +145,24 @@ button { cursor: pointer; }
 .editor-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-top: 8px; }
 .secondary-action { color: #173f2c; background: #e4e9e4; }
 
+/* Commandes */
+.order-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 16px 20px; border-bottom: 1px solid #e7e9e4; }
+.order-filters button { color: #4d5c53; background: #f1f3ef; border: 0; padding: 9px 14px; font-size: 13px; font-weight: 700; }
+.order-filters button.active { color: white; background: #173f2c; }
+.status-badge.order-confirmee { color: #6b4b0c; background: #fbecc4; }
+.status-badge.order-en_preparation { color: #24456b; background: #dde8f5; }
+.status-badge.order-expediee, .status-badge.order-livree { color: #195235; background: #dceee2; }
+.status-badge.order-annulee { color: #7b3434; background: #f5dfdd; }
+.order-pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; color: #66736a; font-size: 13px; }
+.order-lines { list-style: none; margin: 0 0 22px; padding: 0; border-top: 1px solid #e8ebe6; }
+.order-lines li { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #e8ebe6; font-size: 14px; }
+.order-lines li small { display: block; color: #7a867e; margin-top: 4px; }
+.order-lines li.cancelled { opacity: .5; text-decoration: line-through; }
+.order-actions { display: grid; gap: 10px; }
+.order-final { color: #69766e; background: #f1f3ef; padding: 14px; }
+.danger-action { border: 0; padding: 13px 18px; font-weight: 800; color: white; background: #9b2c2c; }
+.danger-action:disabled { cursor: wait; opacity: .6; }
+
 @media (max-width: 900px) {
   .login-page { grid-template-columns: 1fr; }
   .brand-panel { min-height: 58vh; }

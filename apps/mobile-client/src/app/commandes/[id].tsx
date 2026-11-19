@@ -1,6 +1,6 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { annulerCommande, annulerLigne, Commande, getCommande } from '../../api/commande';
 import { useAuth } from '../../auth/AuthProvider';
@@ -32,23 +32,34 @@ export default function CommandeDetailScreen() {
   );
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isReady || !accessToken || !Number.isFinite(idCommande)) return;
-    let active = true;
-    getCommande(authenticatedFetch, idCommande)
-      .then((loaded) => {
-        if (active) setCommande(loaded);
-      })
-      .catch((loadError: unknown) => {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Cette commande est indisponible.');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [accessToken, authenticatedFetch, idCommande, isReady]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Le vendeur peut faire évoluer le statut à tout moment : on recharge à chaque retour sur l'écran
+  // et toutes les 30 s tant qu'il est affiché, plus le geste « tirer pour actualiser ».
+  const recharger = useCallback(async () => {
+    try {
+      setCommande(await getCommande(authenticatedFetch, idCommande));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Cette commande est indisponible.');
+    } finally {
+      setLoading(false);
+    }
+  }, [authenticatedFetch, idCommande]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isReady || !accessToken || !Number.isFinite(idCommande)) return;
+      void recharger();
+      const timer = setInterval(() => void recharger(), 30_000);
+      return () => clearInterval(timer);
+    }, [accessToken, idCommande, isReady, recharger])
+  );
+
+  async function actualiser() {
+    setRefreshing(true);
+    await recharger();
+    setRefreshing(false);
+  }
 
   if (!isReady) {
     return (
@@ -106,7 +117,10 @@ export default function CommandeDetailScreen() {
   );
 
   return (
-    <ScrollView contentContainerStyle={ui.page}>
+    <ScrollView
+      contentContainerStyle={ui.page}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void actualiser()} />}
+    >
       <View style={ui.container}>
         <View style={ui.header}>
           <View style={ui.headerCopy}>

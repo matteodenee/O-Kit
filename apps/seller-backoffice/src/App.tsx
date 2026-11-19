@@ -4,6 +4,7 @@ import type { CatalogueRequest } from './api/catalogue';
 import { getUnreadCount } from './api/stock';
 import { applicationUrl, isExclusiveSeller, keycloak } from './auth/keycloak';
 import CatalogueManager from './catalogue/CatalogueManager';
+import CommandeManager from './commande/CommandeManager';
 import StockManager from './stock/StockManager';
 import './styles.css';
 
@@ -43,7 +44,7 @@ function currentAuthenticationState(): AuthenticationState {
 
 export default function App() {
   const [authentication, setAuthentication] = useState<AuthenticationState>(initialState);
-  const [activeSection, setActiveSection] = useState<'overview' | 'catalogue' | 'stock'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'catalogue' | 'stock' | 'commandes'>('overview');
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const synchronizeAuthentication = useCallback(() => {
@@ -246,6 +247,13 @@ export default function App() {
             >
               Stock
             </button>
+            <button
+                className={activeSection === 'commandes' ? 'active' : undefined}
+                type="button"
+                onClick={() => setActiveSection('commandes')}
+            >
+              Commandes
+            </button>
           </nav>
           <button className="logout-button" type="button" onClick={logout}>
             Déconnexion
@@ -256,6 +264,8 @@ export default function App() {
               <CatalogueManager request={catalogueRequest} />
           ) : activeSection === 'stock' ? (
               <StockManager request={catalogueRequest} />
+          ) : activeSection === 'commandes' ? (
+              <CommandeManager request={catalogueRequest} />
           ) : (
               <>
                 <header className="dashboard-header">
@@ -304,6 +314,14 @@ export default function App() {
                     <p>Consulte et ajuste les niveaux de stock des variantes.</p>
                     <button className="inline-link" type="button" onClick={() => setActiveSection('stock')}>
                       Ouvrir les Stocks →
+                    </button>
+                  </article>
+                  <article className="catalogue-card">
+                    <p className="eyebrow">COMMANDES</p>
+                    <h3>Traiter les commandes</h3>
+                    <p>Accepte, prépare, expédie ou annule les commandes des acheteurs.</p>
+                    <button className="inline-link" type="button" onClick={() => setActiveSection('commandes')}>
+                      Ouvrir les Commandes →
                     </button>
                   </article>
                 </section>

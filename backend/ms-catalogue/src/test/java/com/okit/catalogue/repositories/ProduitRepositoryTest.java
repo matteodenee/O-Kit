@@ -7,7 +7,9 @@ import com.okit.catalogue.entities.Produit;
 import com.okit.catalogue.entities.ProduitStatut;
 import com.okit.catalogue.entities.Promotion;
 import com.okit.catalogue.entities.Saison;
+import com.okit.catalogue.entities.Taille;
 import com.okit.catalogue.entities.TauxTva;
+import com.okit.catalogue.entities.Variante;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -273,6 +275,105 @@ class ProduitRepositoryTest {
         assertThat(tauxTvaRepository.findByTaux(new BigDecimal("20.00"))).isPresent();
         assertThat(equipeRepository.findByNom("Paris Saint-Germain")).isPresent();
         assertThat(equipeRepository.findByType(EquipeType.CLUB)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Persistance de photoUrl et des 8 variantes de tailles (XXS à XXXL)")
+    void shouldPersistPhotoUrlAndEightVariantes() {
+        Produit produit = createProduit(
+                "Maillot PSG Avec Tailles",
+                new BigDecimal("83.33"),
+                entityManager.find(Saison.class, saison2025.getIdSaison()),
+                entityManager.find(Marque.class, nike.getIdMarque()),
+                entityManager.find(TauxTva.class, tva20.getIdTauxTVA()),
+                entityManager.find(Equipe.class, psg.getIdEquipe()),
+                ProduitStatut.ACTIF
+        );
+        produit.setPhotoUrl("https://cdn.okit.fr/psg-home.svg");
+        for (Taille taille : Taille.values()) {
+            produit.addVariante(new Variante(produit, taille));
+        }
+
+        Produit saved = produitRepository.save(produit);
+        entityManager.flush();
+        entityManager.clear();
+
+        Produit reloaded = produitRepository.findWithDetailsByIdProduit(saved.getIdProduit()).orElseThrow();
+        assertThat(reloaded.getPhotoUrl()).isEqualTo("https://cdn.okit.fr/psg-home.svg");
+        assertThat(reloaded.getVariantes())
+                .hasSize(8)
+                .extracting(Variante::getTaille)
+                .containsExactlyInAnyOrder(Taille.values());
+    }
+
+    @Test
+    @DisplayName("Filtrage par marque, saison et club/équipe par nom (insensible à la casse) et tri par prix croissant/décroissant")
+    void shouldFilterByNamesCaseInsensitiveAndSortByPrice() {
+        Saison s24 = entityManager.find(Saison.class, saison2024.getIdSaison());
+        Saison s25 = entityManager.find(Saison.class, saison2025.getIdSaison());
+        Marque mNike = entityManager.find(Marque.class, nike.getIdMarque());
+        Marque mAdidas = entityManager.find(Marque.class, adidas.getIdMarque());
+        TauxTva tva = entityManager.find(TauxTva.class, tva20.getIdTauxTVA());
+        Equipe eqPsg = entityManager.find(Equipe.class, psg.getIdEquipe());
+        Equipe eqFrance = entityManager.find(Equipe.class, france.getIdEquipe());
+
+        Produit p1 = createProduit("PSG Nike 2024", new BigDecimal("70.00"), s24, mNike, tva, eqPsg, ProduitStatut.ACTIF);
+        Produit p2 = createProduit("France Nike 2024", new BigDecimal("95.00"), s24, mNike, tva, eqFrance, ProduitStatut.ACTIF);
+        Produit p3 = createProduit("PSG Nike 2025", new BigDecimal("85.00"), s25, mNike, tva, eqPsg, ProduitStatut.ACTIF);
+        Produit p4 = createProduit("France Adidas 2025", new BigDecimal("110.00"), s25, mAdidas, tva, eqFrance, ProduitStatut.ACTIF);
+
+        produitRepository.save(p1);
+        produitRepository.save(p2);
+        produitRepository.save(p3);
+        produitRepository.save(p4);
+        entityManager.flush();
+        entityManager.clear();
+
+        // Filtrage par nom de club + saison + marque insensible à la casse via findByFilters
+        Page<Produit> filteredByNames = produitRepository.findByFilters(
+                null,
+                null,
+                null,
+                "paris saint-germain",
+                "2025/2026",
+                "NIKE",
+                ProduitStatut.ACTIF,
+                PageRequest.of(0, 10)
+        );
+        assertThat(filteredByNames.getTotalElements()).isEqualTo(1);
+        assertThat(filteredByNames.getContent().get(0).getTitre()).isEqualTo("PSG Nike 2025");
+
+        // Filtrage via ProduitSpecification par noms
+        Specification<Produit> specNames = ProduitSpecification.withFilters(
+                null,
+                null,
+                null,
+                "équipe de france",
+                null,
+                "adidas",
+                ProduitStatut.ACTIF
+        );
+        Page<Produit> specResult = produitRepository.findAll(specNames, PageRequest.of(0, 10));
+        assertThat(specResult.getTotalElements()).isEqualTo(1);
+        assertThat(specResult.getContent().get(0).getTitre()).isEqualTo("France Adidas 2025");
+
+        // Tri par prix croissant
+        Page<Produit> ascPage = produitRepository.findByFilters(
+                null, null, null, null, null, null, ProduitStatut.ACTIF,
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "prixDeBase"))
+        );
+        assertThat(ascPage.getContent())
+                .extracting(Produit::getTitre)
+                .containsExactly("PSG Nike 2024", "PSG Nike 2025", "France Nike 2024", "France Adidas 2025");
+
+        // Tri par prix décroissant
+        Page<Produit> descPage = produitRepository.findByFilters(
+                null, null, null, null, null, null, ProduitStatut.ACTIF,
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "prixDeBase"))
+        );
+        assertThat(descPage.getContent())
+                .extracting(Produit::getTitre)
+                .containsExactly("France Adidas 2025", "France Nike 2024", "PSG Nike 2025", "PSG Nike 2024");
     }
 
     private Produit createProduit(String titre, BigDecimal prix, Saison saison, Marque marque, TauxTva tva, Equipe equipe, ProduitStatut statut) {

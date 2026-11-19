@@ -64,7 +64,8 @@ public class ProduitMapper {
                 produit.getSaison() != null ? produit.getSaison().getNom() : null,
                 produit.getEquipe() != null ? produit.getEquipe().getNom() : null,
                 produit.getStatut(),
-                varianteIds != null ? varianteIds : List.of()
+                varianteIds != null ? varianteIds : List.of(),
+                produit.getPhotoUrl()
         );
     }
 
@@ -131,7 +132,8 @@ public class ProduitMapper {
                 equipeDto,
                 tauxTva,
                 promotionDto,
-                variantesDto
+                variantesDto,
+                produit.getPhotoUrl()
         );
     }
 
@@ -150,6 +152,7 @@ public class ProduitMapper {
         produit.setEstFlocable(dto.estFlocable() != null ? dto.estFlocable() : true);
         produit.setStatut(dto.statut() != null ? dto.statut() : ProduitStatut.ACTIF);
         produit.setEnStock(true);
+        produit.setPhotoUrl(dto.photoUrl());
         produit.setSaison(saison);
         produit.setMarque(marque);
         produit.setTauxTva(tva);

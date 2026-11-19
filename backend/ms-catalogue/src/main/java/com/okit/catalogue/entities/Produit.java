@@ -62,6 +62,9 @@ public class Produit {
     @Column(name = "en_stock", nullable = false)
     private Boolean enStock = true;
 
+    @Column(name = "photo_url", length = 2000)
+    private String photoUrl;
+
     @NotNull(message = "La saison est obligatoire")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_saison", nullable = false)
@@ -182,6 +185,14 @@ public class Produit {
 
     public void setEnStock(Boolean enStock) {
         this.enStock = enStock;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
+    }
+
+    public void setPhotoUrl(String photoUrl) {
+        this.photoUrl = photoUrl;
     }
 
     public Saison getSaison() {

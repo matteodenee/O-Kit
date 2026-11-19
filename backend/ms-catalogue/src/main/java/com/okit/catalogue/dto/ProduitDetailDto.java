@@ -23,6 +23,91 @@ public record ProduitDetailDto(
         EquipeDto equipe,
         BigDecimal tauxTva,
         PromotionDto promotionActive,
-        List<VarianteDto> variantes
+        List<VarianteDto> variantes,
+        String photoUrl
 ) {
+    public ProduitDetailDto(
+            Long id,
+            String titre,
+            String description,
+            BigDecimal prixDeBaseHT,
+            BigDecimal prixTTC,
+            BigDecimal prixApresPromotionTTC,
+            Double poids,
+            String couleursPrincipales,
+            String impactEnvi,
+            Boolean estFlocable,
+            boolean enStock,
+            ProduitStatut statut,
+            MarqueDto marque,
+            SaisonDto saison,
+            EquipeDto equipe,
+            BigDecimal tauxTva,
+            PromotionDto promotionActive
+    ) {
+        this(
+                id,
+                titre,
+                description,
+                prixDeBaseHT,
+                prixTTC,
+                prixApresPromotionTTC,
+                poids,
+                couleursPrincipales,
+                impactEnvi,
+                estFlocable,
+                enStock,
+                statut,
+                marque,
+                saison,
+                equipe,
+                tauxTva,
+                promotionActive,
+                List.of(),
+                null
+        );
+    }
+
+    public ProduitDetailDto(
+            Long id,
+            String titre,
+            String description,
+            BigDecimal prixDeBaseHT,
+            BigDecimal prixTTC,
+            BigDecimal prixApresPromotionTTC,
+            Double poids,
+            String couleursPrincipales,
+            String impactEnvi,
+            Boolean estFlocable,
+            boolean enStock,
+            ProduitStatut statut,
+            MarqueDto marque,
+            SaisonDto saison,
+            EquipeDto equipe,
+            BigDecimal tauxTva,
+            PromotionDto promotionActive,
+            List<VarianteDto> variantes
+    ) {
+        this(
+                id,
+                titre,
+                description,
+                prixDeBaseHT,
+                prixTTC,
+                prixApresPromotionTTC,
+                poids,
+                couleursPrincipales,
+                impactEnvi,
+                estFlocable,
+                enStock,
+                statut,
+                marque,
+                saison,
+                equipe,
+                tauxTva,
+                promotionActive,
+                variantes,
+                null
+        );
+    }
 }

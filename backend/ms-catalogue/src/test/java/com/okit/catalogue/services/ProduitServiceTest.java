@@ -1,5 +1,6 @@
 package com.okit.catalogue.services;
 
+import com.okit.catalogue.dto.CatalogueFiltersDto;
 import com.okit.catalogue.dto.EquipeDto;
 import com.okit.catalogue.dto.MarqueDto;
 import com.okit.catalogue.dto.PageResponse;
@@ -8,12 +9,14 @@ import com.okit.catalogue.dto.ProduitInputDto;
 import com.okit.catalogue.dto.ProduitSummaryDto;
 import com.okit.catalogue.dto.ProduitUpdateInputDto;
 import com.okit.catalogue.dto.SaisonDto;
+import com.okit.catalogue.dto.VarianteDto;
 import com.okit.catalogue.entities.Equipe;
 import com.okit.catalogue.entities.EquipeType;
 import com.okit.catalogue.entities.Marque;
 import com.okit.catalogue.entities.Produit;
 import com.okit.catalogue.entities.ProduitStatut;
 import com.okit.catalogue.entities.Saison;
+import com.okit.catalogue.entities.Taille;
 import com.okit.catalogue.entities.TauxTva;
 import com.okit.catalogue.exceptions.BusinessValidationException;
 import com.okit.catalogue.exceptions.ResourceNotFoundException;
@@ -432,5 +435,124 @@ class ProduitServiceTest {
         assertThatThrownBy(() -> produitService.updateStockStatus(99L, false))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Produit introuvable");
+    }
+
+    @Test
+    @DisplayName("getProducts : filtre par noms de marque, saison et équipe avec normalisation")
+    void shouldFilterProductsByNamesWithTrimming() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Produit> produitPage = new PageImpl<>(List.of(produit), pageable, 1);
+
+        when(produitRepository.findByFilters(
+                null, null, null, "Paris Saint-Germain", "2024/2025", "Nike", ProduitStatut.ACTIF, pageable
+        )).thenReturn(produitPage);
+        when(produitMapper.toSummaryDto(produit)).thenReturn(summaryDto);
+
+        PageResponse<ProduitSummaryDto> response = produitService.getProducts(
+                null, null, null, "  Paris Saint-Germain ", " 2024/2025 ", " Nike ", ProduitStatut.ACTIF, pageable
+        );
+
+        assertThat(response.content()).hasSize(1);
+        verify(produitRepository).findByFilters(
+                null, null, null, "Paris Saint-Germain", "2024/2025", "Nike", ProduitStatut.ACTIF, pageable
+        );
+    }
+
+    @Test
+    @DisplayName("getAvailableFilters : retourne les marques, saisons et équipes triées par nom")
+    void shouldReturnAvailableFiltersSortedByName() {
+        when(marqueRepository.findAll()).thenReturn(List.of(
+                new Marque(2L, "Puma", null),
+                new Marque(1L, "Adidas", null),
+                new Marque(3L, "Nike", null)
+        ));
+        when(saisonRepository.findAll()).thenReturn(List.of(
+                new Saison(2L, "2025/2026"),
+                new Saison(1L, "2024")
+        ));
+        when(equipeRepository.findAll()).thenReturn(List.of(
+                new Equipe(2L, "Real Madrid", null, EquipeType.CLUB),
+                new Equipe(1L, "Arsenal", null, EquipeType.CLUB),
+                new Equipe(3L, "France", null, EquipeType.SELECTION)
+        ));
+
+        CatalogueFiltersDto filters = produitService.getAvailableFilters();
+
+        assertThat(filters.marques()).extracting(MarqueDto::nomMarque)
+                .containsExactly("Adidas", "Nike", "Puma");
+        assertThat(filters.saisons()).extracting(SaisonDto::nom)
+                .containsExactly("2024", "2025/2026");
+        assertThat(filters.equipes()).extracting(EquipeDto::nom)
+                .containsExactly("Arsenal", "France", "Real Madrid");
+    }
+
+    @Test
+    @DisplayName("createProduct et updateProduct : gèrent photoUrl et les variantes de tailles")
+    void shouldHandlePhotoUrlAndVariantesOnCreateAndUpdate() {
+        ProduitInputDto input = new ProduitInputDto(
+                "Maillot Domicile",
+                "Description",
+                new BigDecimal("90.00"),
+                0.25,
+                "Bleu",
+                "A",
+                true,
+                ProduitStatut.ACTIF,
+                1L,
+                1L,
+                1L,
+                1L,
+                List.of(Taille.values()),
+                "https://cdn.okit.fr/psg.svg"
+        );
+
+        List<VarianteDto> variantes = List.of(
+                new VarianteDto(1L, Taille.XXS),
+                new VarianteDto(2L, Taille.XS),
+                new VarianteDto(3L, Taille.S),
+                new VarianteDto(4L, Taille.M),
+                new VarianteDto(5L, Taille.L),
+                new VarianteDto(6L, Taille.XL),
+                new VarianteDto(7L, Taille.XXL),
+                new VarianteDto(8L, Taille.XXXL)
+        );
+        ProduitDetailDto richDetail = new ProduitDetailDto(
+                10L, "Maillot Domicile", "Superbe maillot",
+                new BigDecimal("90.00"), new BigDecimal("108.00"), new BigDecimal("108.00"),
+                0.25, "Bleu", "A", true, true, ProduitStatut.ACTIF,
+                new MarqueDto(1L, "Nike", "https://example.com/nike.png"),
+                new SaisonDto(1L, "2024/2025"),
+                new EquipeDto(1L, "PSG", "https://example.com/psg.png", EquipeType.CLUB),
+                new BigDecimal("20.00"),
+                null,
+                variantes,
+                "https://cdn.okit.fr/psg.svg"
+        );
+
+        when(saisonRepository.findById(1L)).thenReturn(Optional.of(saison));
+        when(marqueRepository.findById(1L)).thenReturn(Optional.of(marque));
+        when(tauxTvaRepository.findById(1L)).thenReturn(Optional.of(tauxTva));
+        when(equipeRepository.findById(1L)).thenReturn(Optional.of(equipe));
+        when(produitMapper.toEntity(input, saison, marque, tauxTva, equipe)).thenReturn(produit);
+        when(produitRepository.save(produit)).thenReturn(produit);
+        when(produitMapper.toDetailDto(produit)).thenReturn(richDetail);
+
+        ProduitDetailDto created = produitService.createProduct(input);
+        assertThat(created.photoUrl()).isEqualTo("https://cdn.okit.fr/psg.svg");
+        assertThat(created.variantes()).hasSize(8);
+
+        when(produitRepository.findById(10L)).thenReturn(Optional.of(produit));
+
+        ProduitUpdateInputDto updateWithPhoto = new ProduitUpdateInputDto(
+                null, null, null, null, null, null, null, null, "  https://cdn.okit.fr/updated.svg  "
+        );
+        produitService.updateProduct(10L, updateWithPhoto);
+        assertThat(produit.getPhotoUrl()).isEqualTo("https://cdn.okit.fr/updated.svg");
+
+        ProduitUpdateInputDto clearPhoto = new ProduitUpdateInputDto(
+                null, null, null, null, null, null, null, null, "   "
+        );
+        produitService.updateProduct(10L, clearPhoto);
+        assertThat(produit.getPhotoUrl()).isNull();
     }
 }

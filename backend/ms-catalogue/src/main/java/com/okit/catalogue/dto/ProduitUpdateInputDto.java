@@ -16,6 +16,19 @@ public record ProduitUpdateInputDto(
         String couleursPrincipales,
         String impactEnvi,
         Boolean estFlocable,
-        ProduitStatut statut
+        ProduitStatut statut,
+        String photoUrl
 ) {
+    public ProduitUpdateInputDto(
+            String titre,
+            String description,
+            BigDecimal prixDeBase,
+            Double poids,
+            String couleursPrincipales,
+            String impactEnvi,
+            Boolean estFlocable,
+            ProduitStatut statut
+    ) {
+        this(titre, description, prixDeBase, poids, couleursPrincipales, impactEnvi, estFlocable, statut, null);
+    }
 }

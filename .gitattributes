@@ -1,0 +1,20 @@
+# Fins de ligne : LF partout dans le dépôt, quel que soit l'OS ou core.autocrlf.
+* text=auto eol=lf
+
+# Scripts Windows : CRLF obligatoire
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binaires : aucune conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.jar binary
+*.class binary
+*.ttf binary
+*.woff binary
+*.woff2 binary

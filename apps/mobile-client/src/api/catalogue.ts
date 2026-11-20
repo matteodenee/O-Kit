@@ -24,6 +24,11 @@ export type ProductPage = {
   isLast: boolean;
 };
 
+type ProductReference = {
+  nom?: string;
+  nomMarque?: string;
+};
+
 export class CatalogueApiError extends Error {
   constructor(public readonly status: number) {
     super(
@@ -60,9 +65,9 @@ export type ProductDetail = {
   estFlocable: boolean | null;
   enStock: boolean;
   statut: 'ACTIF' | 'DESACTIVE';
-  marque: { nomMarque?: string } | null;
-  saison: { nom?: string } | null;
-  equipe: { nom?: string } | null;
+  marque: ProductReference | null;
+  saison: ProductReference | null;
+  equipe: ProductReference | null;
   tauxTva: number;
   variantes: { id: number; taille: Taille }[];
 };
@@ -82,3 +87,21 @@ export type VariantStockStatus = {
   status: StockStatusType;
   availableQuantity?: number;
 };
+
+export async function getProductById(
+  authenticatedFetch: AuthenticatedFetch,
+  productId: number
+): Promise<ProductDetail | null> {
+  const response = await authenticatedFetch(
+    `${apiBaseUrl}/api/v1/products/${encodeURIComponent(productId)}`
+  );
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new CatalogueApiError(response.status);
+  }
+
+  return response.json() as Promise<ProductDetail>;
+}

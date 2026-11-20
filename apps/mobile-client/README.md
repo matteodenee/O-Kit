@@ -2,7 +2,7 @@
 
 Application Expo SDK 57 compatible Android, iOS et aperçu web. Keycloak gère
 l'inscription et la connexion avec Authorization Code et PKCE ; `user-service`
-conserve ensuite le profil métier et ses adresses de livraison sauvegardées.
+conserve ensuite le profil métier, ses adresses de livraison et sa wishlist.
 
 ## Configuration locale
 
@@ -64,7 +64,7 @@ La procédure complète et le diagnostic réseau se trouvent dans
 Depuis la racine du dépôt, démarrer d'abord le backend :
 
 ```bash
-docker compose up --build keycloak postgres user-service api-gateway
+docker compose up --build keycloak postgres rabbitmq catalogue-service user-service api-gateway
 ```
 
 Puis, dans `apps/mobile-client` :
@@ -82,6 +82,12 @@ Une fois le profil créé, **Gérer mes adresses** ouvre la route Expo Router
 `/addresses`. Elle permet de créer et modifier une adresse internationale, de
 choisir l'adresse par défaut et de masquer une adresse après confirmation. Le
 même écran fonctionne sur Android, iOS et dans l'aperçu web.
+
+La route `/catalogue` affiche les produits actifs et permet de les ajouter aux
+favoris avec le bouton en forme de coeur. **Mes favoris** ouvre `/wishlist` :
+l'application charge les identifiants conservés par `user-service`, puis les
+informations à jour de chaque produit auprès de `catalogue-service`. Un favori
+devenu indisponible reste visible et peut être retiré manuellement.
 
 Le client renouvelle automatiquement l'access token avant expiration et retente
 une seule fois un appel ayant reçu `401`. Les sessions natives sont conservées

@@ -51,3 +51,14 @@ Utilisateur pour retourner la liste des produits.
 - aucun couplage réseau ou de données n'est créé entre les deux microservices ;
 - l'indisponibilité du Catalogue est affichée comme une erreur de chargement au
   client sans affecter l'authentification ni le profil Utilisateur.
+
+## Première application événementielle
+
+L'[ADR 0010](0010-user-wishlist.md) introduit le premier événement métier :
+Catalogue publie `product.status.changed.v1` et `user-service` le consomme pour
+retirer des wishlists les produits désactivés. Son schéma versionné se trouve
+dans `docs/events/product-status-changed.v1.schema.json`.
+
+Le CRUD de wishlist reste synchrone en REST. La file du service Utilisateur est
+durable, utilise des tentatives bornées et redirige les échecs définitifs vers
+une DLQ durable.

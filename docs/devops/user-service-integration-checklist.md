@@ -12,12 +12,14 @@ reprendre lors de l'intégration finale, sans effectuer de merge ni de rebase ic
 - conserver les étapes communes `lint -> test -> build -> scan -> deploy` ;
 - ne pas déployer si les tests, scans ou validations de manifests échouent.
 
-Le pipeline commun est présent sur cette branche. Il exécute actuellement les
-tests du Catalogue selon les chemins modifiés. La vérification de disponibilité
+Le pipeline commun est présent sur cette branche. Il exécute les tests du
+Catalogue et du service Utilisateur selon les chemins modifiés. Le job
+`test:ms-utilisateur` lance `mvn clean verify`, publie les rapports JUnit de
+Surefire et Failsafe et utilise un service Docker-in-Docker pour la base
+PostgreSQL isolée démarrée par Testcontainers. Le runner GitLab doit donc
+autoriser le service Docker privilégié. La vérification de disponibilité
 Kubernetes `k8s-check` est manuelle dans les pipelines lancés depuis l'interface
 GitLab ou sur `main` ; elle n'est pas ajoutée aux pipelines de Merge Request.
-Le job de test du service Utilisateur et ses chemins devront être ajoutés au
-pipeline commun au moment de l'intégration finale.
 
 ## Contrats et consommateurs
 

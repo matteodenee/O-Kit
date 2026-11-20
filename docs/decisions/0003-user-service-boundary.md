@@ -38,8 +38,9 @@ Les adresses de livraison et la wishlist sont envisagées comme de nouvelles
 tranches fonctionnelles autour du domaine utilisateur. La présente décision ne
 les attribuait pas automatiquement à `user-service`. La tranche adresses est
 désormais attribuée à ce service par l'[ADR 0008](0008-user-addresses.md). La
-wishlist reste en attente de l'identification des produits portée par le
-domaine catalogue.
+wishlist appartient désormais à `user-service` conformément à
+l'[ADR 0010](0010-user-wishlist.md). Elle ne conserve que l'identifiant stable
+du produit fourni par le domaine Catalogue.
 
 ## API initiale
 
@@ -79,8 +80,8 @@ domaine client au modèle interne du fournisseur d'identité.
 - `sub` est une clé externe immuable et unique ;
 - le service possède sa table et ses migrations ;
 - un changement d'e-mail reste du ressort de Keycloak ;
-- toute extension vers les adresses ou la wishlist nécessite une décision de
-  frontière, un contrat API et un modèle de données documentés ;
+- les extensions adresses et wishlist suivent respectivement les ADR 0008 et
+  0010, leurs contrats API et leurs modèles documentés ;
 - les autres microservices ne lisent jamais directement `identity_subject` ni
   la table `user_profiles` ;
 - les futurs endpoints administratifs nécessiteront une décision explicite sur les rôles.

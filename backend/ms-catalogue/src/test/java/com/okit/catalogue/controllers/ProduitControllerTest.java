@@ -91,7 +91,8 @@ class ProduitControllerTest {
                 new SaisonDto(1L, "2024/2025"),
                 new EquipeDto(1L, "PSG", "https://example.com/psg.png", EquipeType.CLUB),
                 new BigDecimal("20.00"),
-                null
+                null,
+                List.of()
         );
     }
 
@@ -319,7 +320,8 @@ class ProduitControllerTest {
                 new SaisonDto(1L, "2024/2025"),
                 new EquipeDto(1L, "PSG", "https://example.com/psg.png", EquipeType.CLUB),
                 new BigDecimal("20.00"),
-                null
+                null,
+                List.of()
         );
 
         when(produitService.updateProduct(eq(1L), any(ProduitUpdateInputDto.class))).thenReturn(updatedDetail);

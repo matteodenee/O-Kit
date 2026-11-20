@@ -271,6 +271,11 @@ export default function AddressesScreen() {
                 <Text style={styles.catalogueButtonText}>Catalogue</Text>
               </Pressable>
             </Link>
+            <Link asChild href="/wishlist">
+              <Pressable accessibilityRole="button" style={styles.catalogueButton}>
+                <Text style={styles.catalogueButtonText}>Mes favoris</Text>
+              </Pressable>
+            </Link>
           </View>
         </View>
 

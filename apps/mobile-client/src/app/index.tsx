@@ -324,14 +324,24 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
       </Link>
 
       {profile ? (
-        <Link asChild href="/addresses">
-          <Pressable
-            accessibilityRole="button"
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
-          >
-            <Text style={styles.secondaryButtonText}>Gérer mes adresses</Text>
-          </Pressable>
-        </Link>
+        <>
+          <Link asChild href="/addresses">
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+            >
+              <Text style={styles.secondaryButtonText}>Gérer mes adresses</Text>
+            </Pressable>
+          </Link>
+          <Link asChild href="/wishlist">
+            <Pressable
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+            >
+              <Text style={styles.secondaryButtonText}>Voir mes favoris</Text>
+            </Pressable>
+          </Link>
+        </>
       ) : null}
 
       <Text style={styles.dataNote}>

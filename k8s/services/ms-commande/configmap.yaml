@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ms-commande-config
+  labels:
+    app.kubernetes.io/name: ms-commande
+    app.kubernetes.io/instance: okit
+    app.kubernetes.io/part-of: okit
+    app.kubernetes.io/component: backend
+data:
+  SERVER_PORT: "8085"
+  # Base logique dédiée sur l'instance PostgreSQL mutualisée (aucun Service DB propre)
+  DB_URL: jdbc:postgresql://postgres-db:5432/okit_commande
+  DB_USERNAME: okit_commande
+  DB_POOL_SIZE: "5"
+  # Les JWT portent l'issuer public ; les clés et tokens de service sont lus en interne
+  OIDC_ISSUER_URI: https://dams5-07.students.polytech.lange.xyz/realms/okit
+  OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+  OIDC_TOKEN_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/token
+  STOCK_CLIENT_ID: ms-commande
+  CATALOGUE_SERVICE_URL: http://ms-catalogue:8082
+  STOCK_SERVICE_URL: http://ms-stock:8083
+  SWAGGER_ENABLED: "false"

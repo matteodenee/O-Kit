@@ -166,6 +166,12 @@ export default function CatalogueScreen() {
         <Link href="/wishlist" style={styles.navigationLink}>
           Mes favoris
         </Link>
+        <Link href="/commandes" style={styles.navigationLink}>
+          Mes commandes
+        </Link>
+        <Link href="/panier" style={[styles.navigationLink, styles.cartLink]}>
+          Mon panier
+        </Link>
       </View>
 
       {message && state === 'ready' ? (
@@ -239,16 +245,23 @@ export default function CatalogueScreen() {
                   )}
                 </Pressable>
               </View>
-              <Text style={styles.cardTitle}>{product.titre}</Text>
-              <Text style={styles.cardMeta}>
-                {[product.nomEquipe, product.nomSaison].filter(Boolean).join(' · ') || 'Collection O’kit'}
-              </Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.price}>{Number(product.prixTTC).toFixed(2)} €</Text>
-                <Text style={product.enStock ? styles.inStock : styles.outOfStock}>
-                  {product.enStock ? 'En stock' : 'Indisponible'}
-                </Text>
-              </View>
+              <Link asChild href={`/produit/${product.id}`}>
+                <Pressable
+                  accessibilityRole="link"
+                  style={({ pressed }) => [styles.cardBody, pressed && styles.cardPressed]}
+                >
+                  <Text style={styles.cardTitle}>{product.titre}</Text>
+                  <Text style={styles.cardMeta}>
+                    {[product.nomEquipe, product.nomSaison].filter(Boolean).join(' · ') || 'Collection O’kit'}
+                  </Text>
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.price}>{Number(product.prixTTC).toFixed(2)} €</Text>
+                    <Text style={product.enStock ? styles.inStock : styles.outOfStock}>
+                      {product.enStock ? 'En stock' : 'Indisponible'}
+                    </Text>
+                  </View>
+                </Pressable>
+              </Link>
             </View>
           ))}
         </View>
@@ -266,6 +279,9 @@ const styles = StyleSheet.create({
   subtitle: { color: '#655f57', marginTop: 6 },
   logout: { color: '#9f3e27', fontWeight: '700', paddingVertical: 8 },
   navigation: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  cartLink: { backgroundColor: '#c95f2b', color: '#fff' },
+  cardBody: { gap: 8 },
+  cardPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   navigationLink: { color: '#1f2925', fontWeight: '700', backgroundColor: '#fff', padding: 12, borderRadius: 10 },
   statePanel: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', gap: 12 },
   stateTitle: { color: '#1f2925', fontSize: 20, fontWeight: '800' },

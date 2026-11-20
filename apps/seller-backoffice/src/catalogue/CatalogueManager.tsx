@@ -8,7 +8,6 @@ import {
   getProduct,
   listAllProducts,
   updateProduct,
-  updateProductStock,
 } from '../api/catalogue';
 
 type CatalogueManagerProps = {
@@ -164,25 +163,6 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
     }
   }
 
-  async function toggleStock() {
-    if (!selectedProduct) return;
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      await updateProductStock(request, selectedProduct.id, !selectedProduct.enStock);
-      const refreshed = await getProduct(request, selectedProduct.id);
-      setSelectedProduct(refreshed);
-      setForm(formFromProduct(refreshed));
-      await loadProducts();
-      setSuccess(refreshed.enStock ? 'Produit marqué disponible.' : 'Produit marqué en rupture.');
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Mise à jour du stock impossible.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <section className="catalogue-page" aria-labelledby="catalogue-title">
       <header className="catalogue-header">
@@ -308,7 +288,6 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
 
               <div className="editor-actions">
                 <button className="primary-action" disabled={saving} type="submit">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
-                <button className="secondary-action" disabled={saving} type="button" onClick={() => void toggleStock()}>{selectedProduct.enStock ? 'Marquer en rupture' : 'Marquer disponible'}</button>
               </div>
             </form>
           )}

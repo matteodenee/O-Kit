@@ -1,4 +1,87 @@
 services:
+  stock-db:
+    image: postgres:16-alpine
+    container_name: okit-stock-db
+    environment:
+      POSTGRES_DB: okit_stock_db
+      POSTGRES_USER: okit_stock
+      POSTGRES_PASSWORD: okit_stock_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - stock_db_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-stock-db.sql:/docker-entrypoint-initdb.d/init-stock-db.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U okit_stock -d okit_stock_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservice Stock
+  stock-service:
+    build:
+      context: ./backend/ms-stock
+      dockerfile: Dockerfile
+    container_name: okit-ms-stock
+    environment:
+      - SERVER_PORT=8083
+      - DB_URL=jdbc:postgresql://stock-db:5432/okit_stock_db
+      - DB_USERNAME=okit_stock
+      - DB_PASSWORD=okit_stock_password
+      # Même issuer que les autres services : celui des jetons acheteur/vendeur ET des jetons
+      # de service de ms-commande (Keycloak l'impose via KC_HOSTNAME)
+      - OIDC_ISSUER_URI=http://localhost:8090/realms/okit
+      - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+    ports:
+      - "8083:8083"
+    depends_on:
+      stock-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  commande-db:
+    image: postgres:16-alpine
+    container_name: okit-commande-db
+    environment:
+      POSTGRES_DB: okit_commande_db
+      POSTGRES_USER: okit_commande
+      POSTGRES_PASSWORD: okit_commande_password
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - commande_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U okit_commande -d okit_commande_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Microservice Commande / Panier / Flocage
+  commande-service:
+    build:
+      context: ./backend/ms-commande
+    container_name: okit-ms-commande
+    environment:
+      - SERVER_PORT=8085
+      - DB_URL=jdbc:postgresql://commande-db:5432/okit_commande_db
+      - DB_USERNAME=okit_commande
+      - DB_PASSWORD=okit_commande_password
+      - OIDC_ISSUER_URI=http://localhost:8090/realms/okit
+      - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+      - OIDC_TOKEN_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/token
+      - STOCK_CLIENT_ID=ms-commande
+      - STOCK_CLIENT_SECRET=${COMMANDE_CLIENT_SECRET:-ms-commande-dev-secret}
+      - CATALOGUE_SERVICE_URL=http://catalogue-service:8082
+      - STOCK_SERVICE_URL=http://stock-service:8083
+    ports:
+      - "127.0.0.1:8085:8085"
+    depends_on:
+      commande-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
   mailpit:
     image: axllent/mailpit:v1.31.5
     restart: unless-stopped
@@ -42,6 +125,11 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Define KEYCLOAK_ADMIN_PASSWORD in .env}
       KC_DB: dev-file
+      # Issuer unique "http://localhost:8090/realms/okit" pour tous les jetons, y compris ceux
+      # demandés depuis le réseau Docker (ms-commande -> http://keycloak:8080, client credentials).
+      # Sans ça, l'issuer dépend de l'URL appelée et ms-stock refuse l'un ou l'autre type de jeton.
+      KC_HOSTNAME: http://localhost:8090
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "127.0.0.1:8090:8080"
     volumes:
@@ -147,6 +235,8 @@ services:
     environment:
       USER_SERVICE_URL: http://user-service:8081
       CATALOGUE_SERVICE_URL: http://catalogue-service:8082
+      STOCK_SERVICE_URL: http://stock-service:8083
+      COMMANDE_SERVICE_URL: http://commande-service:8085
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
       CORS_ALLOWED_ORIGIN: http://localhost:19006
@@ -165,4 +255,6 @@ volumes:
   keycloak_data:
   mailpit_data:
   postgres_data:
+  stock_db_data:
+  commande_db_data:
   rabbitmq_data:

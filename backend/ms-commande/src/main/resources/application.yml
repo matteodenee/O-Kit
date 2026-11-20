@@ -1,0 +1,79 @@
+server:
+  port: ${SERVER_PORT:8085}
+  shutdown: graceful
+
+spring:
+  application:
+    name: ms-commande
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/okit_commande_db}
+    username: ${DB_USERNAME:okit_commande}
+    password: ${DB_PASSWORD:?Define DB_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 5000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # le schéma est piloté uniquement par Flyway
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  security:
+    oauth2:
+      # 1) On VALIDE les JWT des acheteurs / vendeurs (comme ms-stock)
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8090/realms/okit}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8090/realms/okit/protocol/openid-connect/certs}
+      # 2) On OBTIENT un token de service (rôle SVC_COMMANDE) pour appeler ms-stock /internal
+      client:
+        registration:
+          stock:
+            provider: keycloak
+            client-id: ${STOCK_CLIENT_ID:ms-commande}
+            client-secret: ${STOCK_CLIENT_SECRET:change-me}
+            authorization-grant-type: client_credentials
+        provider:
+          keycloak:
+            token-uri: ${OIDC_TOKEN_URI:http://localhost:8090/realms/okit/protocol/openid-connect/token}
+
+okit:
+  commande:
+    frais-livraison: 4.90          # en euros, HT
+    prix-flocage-ht: 12.50         # prix fixe d'un flocage, HT (à valider avec l'équipe)
+    flocage-texte-max: 15          # nb max de caractères du nom floqué
+    services:
+      catalogue-url: ${CATALOGUE_SERVICE_URL:http://localhost:8082}
+      stock-url: ${STOCK_SERVICE_URL:http://localhost:8083}
+    security:
+      seller-role: SELLER
+      buyer-role: BUYER
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+
+logging:
+  level:
+    com.okit.commande: INFO

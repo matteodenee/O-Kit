@@ -1,6 +1,8 @@
 import { apiBaseUrl } from '../auth/config';
 import type { AuthenticatedFetch } from '../auth/AuthProvider';
 
+export type StockStatusType = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+
 export type ProductSummary = {
   id: number;
   titre: string;
@@ -27,20 +29,6 @@ type ProductReference = {
   nomMarque?: string;
 };
 
-export type ProductDetail = {
-  id: number;
-  titre: string;
-  description: string | null;
-  prixDeBaseHT: number;
-  prixTTC: number;
-  prixApresPromotionTTC: number;
-  enStock: boolean;
-  statut: 'ACTIF' | 'DESACTIVE';
-  marque: ProductReference | null;
-  saison: ProductReference | null;
-  equipe: ProductReference | null;
-};
-
 export class CatalogueApiError extends Error {
   constructor(public readonly status: number) {
     super(
@@ -62,6 +50,43 @@ export async function getActiveProducts(authenticatedFetch: AuthenticatedFetch) 
 
   return response.json() as Promise<ProductPage>;
 }
+
+export type Taille = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+export const ORDRE_TAILLES: Taille[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+
+export type ProductDetail = {
+  id: number;
+  titre: string;
+  description: string | null;
+  prixDeBaseHT: number;
+  prixTTC: number;
+  prixApresPromotionTTC: number | null;
+  couleursPrincipales: string | null;
+  estFlocable: boolean | null;
+  enStock: boolean;
+  statut: 'ACTIF' | 'DESACTIVE';
+  marque: ProductReference | null;
+  saison: ProductReference | null;
+  equipe: ProductReference | null;
+  tauxTva: number;
+  variantes: { id: number; taille: Taille }[];
+};
+
+export async function getProduct(authenticatedFetch: AuthenticatedFetch, id: number) {
+  const response = await authenticatedFetch(`${apiBaseUrl}/api/v1/products/${id}`);
+  if (!response.ok) {
+    throw response.status === 404
+      ? new Error('Ce maillot est introuvable.')
+      : new CatalogueApiError(response.status);
+  }
+  return response.json() as Promise<ProductDetail>;
+}
+
+export type VariantStockStatus = {
+  variantId: number;
+  status: StockStatusType;
+  availableQuantity?: number;
+};
 
 export async function getProductById(
   authenticatedFetch: AuthenticatedFetch,

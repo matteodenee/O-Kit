@@ -221,7 +221,7 @@ export default function WishlistScreen() {
                           .join(' · ') || 'Collection O’kit'}
                       </Text>
                       <Text style={styles.price}>
-                        {Number(product.prixApresPromotionTTC).toFixed(2)} €
+                        {Number(product.prixApresPromotionTTC ?? product.prixTTC).toFixed(2)} €
                       </Text>
                     </>
                   ) : (

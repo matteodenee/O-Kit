@@ -1,4 +1,10 @@
+export type Taille = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
 export type ProductStatus = 'ACTIF' | 'DESACTIVE';
+
+export type ProductVariant = {
+  id: number;
+  taille: Taille
+};
 
 export type ProductSummary = {
   id: number;
@@ -30,6 +36,7 @@ export type ProductDetail = {
   equipe: { idEquipe: number; nom: string; logoUrl: string | null; type: string } | null;
   tauxTva: number;
   promotionActive: unknown | null;
+  variantes: ProductVariant[];
 };
 
 export type ProductUpdate = {

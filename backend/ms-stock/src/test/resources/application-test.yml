@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:0/test-issuer   # JWT simulés via jwt() : jamais appelé
+
+okit:
+  stock:
+    low-stock-threshold: 10

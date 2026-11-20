@@ -5,6 +5,8 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import com.okit.catalogue.entities.Taille;
+import java.util.List;
 
 import java.math.BigDecimal;
 
@@ -38,6 +40,15 @@ public record ProduitInputDto(
         @NotNull(message = "L'identifiant du taux de TVA est obligatoire")
         Long idTauxTVA,
 
-        Long idEquipe
+        Long idEquipe,
+
+        List<Taille> tailles
 ) {
+        public ProduitInputDto(String titre, String description, BigDecimal prixDeBase, Double poids,
+                               String couleursPrincipales, String impactEnvi, Boolean estFlocable,
+                               ProduitStatut statut, Long idSaison, Long idMarque, Long idTauxTVA,
+                               Long idEquipe) {
+                this(titre, description, prixDeBase, poids, couleursPrincipales, impactEnvi,
+                        estFlocable, statut, idSaison, idMarque, idTauxTVA, idEquipe, null);
+        }
 }

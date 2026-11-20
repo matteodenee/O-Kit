@@ -22,9 +22,12 @@ rôle, ni donnée vendeur.
 |---|---|---|
 | API Gateway | `http://localhost:8080` | `adb reverse tcp:8080 tcp:8080` |
 | Service Utilisateur | `http://localhost:8081` | Accès **via la Gateway**, pas d'ADB reverse direct nécessaire |
+| **Service Catalogue** | Conteneur interne (`8082`) | Accès via la Gateway |
+| **Service Stock** | `http://localhost:8083` | Accès via la Gateway |
 | Keycloak | `http://localhost:8090` | `adb reverse tcp:8090 tcp:8090` |
 | Expo / Metro | `http://127.0.0.1:19006` | `adb reverse tcp:19006 tcp:19006` |
 | PostgreSQL | `localhost:5432` | Pas d'accès direct depuis Android |
+| **PostgreSQL (Stock)** | `localhost:5434` | Pas d'accès direct depuis Android
 | Mailpit | `http://localhost:8025` | Accessible dans le navigateur du PC |
 | RabbitMQ | `http://localhost:15672` | Accessible dans le navigateur du PC |
 | Backoffice vendeur | `http://localhost:5173` | Site à ouvrir dans le navigateur du PC |
@@ -313,6 +316,7 @@ navigateur. L'utilisateur peut créer un compte ou se connecter via Keycloak,
 puis consulter le catalogue. Le serveur Expo doit rester actif dans son
 terminal pendant toute l'utilisation de l'application.
 
+Attendre la fin du démarrage (les statuts `health: starting` juste après `up` sont normaux). La procédure validée donne : **Gateway** sur `8080`, **Utilisateur** (`8081`), **Catalogue** (`8082`) et **Stock** (`8083`) démarrés/healthy, **Keycloak** sur `8090`, **PostgreSQL** (`5432` & `5434`) et **Mailpit** (`8025`) healthy.
 ## 6. Première installation de l'application sur le téléphone Android
 
 **Cette section n'est nécessaire que si O'Kit n'est pas encore installé, ou si un changement natif exige un nouveau build.**

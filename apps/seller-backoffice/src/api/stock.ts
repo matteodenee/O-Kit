@@ -61,3 +61,30 @@ export async function markNotificationRead(request: CatalogueRequest, id: number
     const response = await request(`/api/v1/seller/notifications/${id}/read`, { method: 'POST' });
     if (!response.ok) throw await problem(response);
 }
+export async function adjustStock(request: CatalogueRequest, variantId: number, targetQuantity: number) {
+    return json<StockDto>(
+        await request(`/api/v1/seller/stocks/${variantId}/adjust`, jsonInit('POST', { targetQuantity })),
+    );
+}
+export type MovementDto = {
+    id: number;
+    variantId: number;
+    change: number;
+    stockAfter: number;
+    reason: 'INITIAL' | 'ORDER_PAID' | 'SELLER_ADJUSTMENT' | 'RESTOCK' | 'ORDER_CANCELLED';
+    reference: string | null;
+    createdAt: string;
+};
+
+export async function listMovements(request: CatalogueRequest, variantId: number) {
+    const page = await json<Page<MovementDto>>(
+        await request(`/api/v1/seller/stocks/${variantId}/movements?size=20`),
+    );
+    return page.content;
+}
+
+export async function createStocksBulk(request: CatalogueRequest, variantIds: number[], quantity: number) {
+    return json<StockDto[]>(
+        await request('/api/v1/seller/stocks/bulk', jsonInit('POST', { variantIds, quantity })),
+    );
+}

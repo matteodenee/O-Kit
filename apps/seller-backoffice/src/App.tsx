@@ -6,6 +6,7 @@ import { applicationUrl, isExclusiveSeller, keycloak } from './auth/keycloak';
 import CatalogueManager from './catalogue/CatalogueManager';
 import CommandeManager from './commande/CommandeManager';
 import StockManager from './stock/StockManager';
+import NotificationBell from './stock/NotificationBell';
 import './styles.css';
 
 const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
@@ -224,6 +225,7 @@ export default function App() {
   return (
       <div className="dashboard-shell">
         <aside className="sidebar">
+          <NotificationBell request={catalogueRequest} />
           <div className="wordmark">O’kit</div>
           <nav aria-label="Navigation vendeur">
             <button
@@ -274,9 +276,6 @@ export default function App() {
                     <h1>Bonjour, {displayName}.</h1>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div className="notification-bell" title="Notifications non lues">
-                      🔔 {unreadCount > 0 && <span className="badge">{unreadCount}</span>}
-                    </div>
                     <div className="role-pill">SELLER</div>
                   </div>
                 </header>

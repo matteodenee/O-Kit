@@ -62,7 +62,7 @@ public class Produit {
     @Column(name = "en_stock", nullable = false)
     private Boolean enStock = true;
 
-    @Column(name = "photo_url", length = 2000)
+    @Column(name = "photo_url", columnDefinition = "TEXT")
     private String photoUrl;
 
     @NotNull(message = "La saison est obligatoire")

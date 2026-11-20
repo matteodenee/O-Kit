@@ -426,9 +426,9 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
 
               <label><span>Titre *</span><input required value={form.titre} onChange={(event) => setForm({ ...form, titre: event.target.value })} /></label>
               <label>
-                <span>Image du maillot (URL ou SVG data-URI)</span>
+                <span>Image du maillot (URL ou data-URI)</span>
                 <input
-                  placeholder="https://… ou data:image/svg+xml;utf8,…"
+                  placeholder="https://… ou data:image/png;base64,…"
                   value={form.photoUrl}
                   onChange={(event) => {
                     setPreviewFailed(false);

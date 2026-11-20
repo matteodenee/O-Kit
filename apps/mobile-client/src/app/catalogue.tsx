@@ -54,6 +54,7 @@ export default function CatalogueScreen() {
   const [selectedSeason, setSelectedSeason] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [priceSort, setPriceSort] = useState<PriceSort>('default');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
 
   const loadFavoriteProductIds = useCallback(async () => {
@@ -211,11 +212,13 @@ export default function CatalogueScreen() {
       [products]
   );
 
-  const hasActiveFilters =
-      selectedBrand !== null ||
-      selectedSeason !== null ||
-      selectedTeam !== null ||
-      priceSort !== 'default';
+  const activeFiltersCount =
+      (selectedBrand !== null ? 1 : 0) +
+      (selectedSeason !== null ? 1 : 0) +
+      (selectedTeam !== null ? 1 : 0) +
+      (priceSort !== 'default' ? 1 : 0);
+
+  const hasActiveFilters = activeFiltersCount > 0;
 
   const resetFilters = useCallback(() => {
     setSelectedBrand(null);
@@ -321,114 +324,142 @@ export default function CatalogueScreen() {
         {state === 'ready' && products.length > 0 ? (
             <>
               <View style={styles.filtersPanel}>
-                <View style={styles.filtersHeader}>
-                  <Text style={styles.filtersHeading}>Filtrer & trier</Text>
-                  <Text style={styles.resultsCount}>
-                    {displayedProducts.length} maillot{displayedProducts.length > 1 ? 's' : ''}
-                  </Text>
-                </View>
+                <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setFiltersExpanded((prev) => !prev)}
+                    style={styles.filtersHeader}
+                >
+                  <View style={styles.filtersHeaderLeft}>
+                    <Text style={styles.filtersHeading}>Filtrer & trier</Text>
+                    {activeFiltersCount > 0 ? (
+                        <View style={styles.activeBadge}>
+                          <Text style={styles.activeBadgeText}>
+                            {activeFiltersCount} actif{activeFiltersCount > 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                    ) : null}
+                  </View>
+                  <View style={styles.filtersHeaderRight}>
+                    <Text style={styles.resultsCount}>
+                      {displayedProducts.length} maillot{displayedProducts.length > 1 ? 's' : ''}
+                    </Text>
+                    <Text style={styles.filtersToggle}>
+                      {filtersExpanded ? 'Masquer ▴' : 'Afficher ▾'}
+                    </Text>
+                  </View>
+                </Pressable>
 
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Marque</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-                    <Pressable
-                        accessibilityRole="button"
-                        onPress={() => setSelectedBrand(null)}
-                        style={[styles.chip, selectedBrand === null && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, selectedBrand === null && styles.chipTextActive]}>Toutes</Text>
+                {!filtersExpanded && hasActiveFilters ? (
+                    <Pressable accessibilityRole="button" onPress={resetFilters} style={styles.inlineResetLink}>
+                      <Text style={styles.inlineResetText}>Réinitialiser</Text>
                     </Pressable>
-                    {brands.map((brand) => {
-                      const active = selectedBrand === brand;
-                      return (
-                          <Pressable
-                              key={brand}
-                              accessibilityRole="button"
-                              onPress={() => setSelectedBrand(active ? null : brand)}
-                              style={[styles.chip, active && styles.chipActive]}
-                          >
-                            <Text style={[styles.chipText, active && styles.chipTextActive]}>{brand}</Text>
-                          </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
+                ) : null}
 
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Saison</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-                    <Pressable
-                        accessibilityRole="button"
-                        onPress={() => setSelectedSeason(null)}
-                        style={[styles.chip, selectedSeason === null && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, selectedSeason === null && styles.chipTextActive]}>Toutes</Text>
-                    </Pressable>
-                    {seasons.map((season) => {
-                      const active = selectedSeason === season;
-                      return (
+                {filtersExpanded ? (
+                    <View style={styles.filtersBody}>
+                      <View style={styles.filterGroup}>
+                        <Text style={styles.filterLabel}>Marque</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
                           <Pressable
-                              key={season}
                               accessibilityRole="button"
-                              onPress={() => setSelectedSeason(active ? null : season)}
-                              style={[styles.chip, active && styles.chipActive]}
+                              onPress={() => setSelectedBrand(null)}
+                              style={[styles.chip, selectedBrand === null && styles.chipActive]}
                           >
-                            <Text style={[styles.chipText, active && styles.chipTextActive]}>{season}</Text>
+                            <Text style={[styles.chipText, selectedBrand === null && styles.chipTextActive]}>Toutes</Text>
                           </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
+                          {brands.map((brand) => {
+                            const active = selectedBrand === brand;
+                            return (
+                                <Pressable
+                                    key={brand}
+                                    accessibilityRole="button"
+                                    onPress={() => setSelectedBrand(active ? null : brand)}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                >
+                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{brand}</Text>
+                                </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
 
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Club / Équipe</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-                    <Pressable
-                        accessibilityRole="button"
-                        onPress={() => setSelectedTeam(null)}
-                        style={[styles.chip, selectedTeam === null && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, selectedTeam === null && styles.chipTextActive]}>Tous</Text>
-                    </Pressable>
-                    {teams.map((team) => {
-                      const active = selectedTeam === team;
-                      return (
+                      <View style={styles.filterGroup}>
+                        <Text style={styles.filterLabel}>Saison</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
                           <Pressable
-                              key={team}
                               accessibilityRole="button"
-                              onPress={() => setSelectedTeam(active ? null : team)}
-                              style={[styles.chip, active && styles.chipActive]}
+                              onPress={() => setSelectedSeason(null)}
+                              style={[styles.chip, selectedSeason === null && styles.chipActive]}
                           >
-                            <Text style={[styles.chipText, active && styles.chipTextActive]}>{team}</Text>
+                            <Text style={[styles.chipText, selectedSeason === null && styles.chipTextActive]}>Toutes</Text>
                           </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
+                          {seasons.map((season) => {
+                            const active = selectedSeason === season;
+                            return (
+                                <Pressable
+                                    key={season}
+                                    accessibilityRole="button"
+                                    onPress={() => setSelectedSeason(active ? null : season)}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                >
+                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{season}</Text>
+                                </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
 
-                <View style={styles.filterGroup}>
-                  <Text style={styles.filterLabel}>Tri par prix</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-                    {PRICE_SORT_OPTIONS.map((option) => {
-                      const active = priceSort === option.value;
-                      return (
+                      <View style={styles.filterGroup}>
+                        <Text style={styles.filterLabel}>Club / Équipe</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
                           <Pressable
-                              key={option.value}
                               accessibilityRole="button"
-                              onPress={() => setPriceSort(option.value)}
-                              style={[styles.chip, active && styles.chipActive]}
+                              onPress={() => setSelectedTeam(null)}
+                              style={[styles.chip, selectedTeam === null && styles.chipActive]}
                           >
-                            <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
+                            <Text style={[styles.chipText, selectedTeam === null && styles.chipTextActive]}>Tous</Text>
                           </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
+                          {teams.map((team) => {
+                            const active = selectedTeam === team;
+                            return (
+                                <Pressable
+                                    key={team}
+                                    accessibilityRole="button"
+                                    onPress={() => setSelectedTeam(active ? null : team)}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                >
+                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{team}</Text>
+                                </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
 
-                {hasActiveFilters ? (
-                    <Pressable accessibilityRole="button" onPress={resetFilters} style={styles.resetButton}>
-                      <Text style={styles.resetButtonText}>Réinitialiser les filtres</Text>
-                    </Pressable>
+                      <View style={styles.filterGroup}>
+                        <Text style={styles.filterLabel}>Tri par prix</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+                          {PRICE_SORT_OPTIONS.map((option) => {
+                            const active = priceSort === option.value;
+                            return (
+                                <Pressable
+                                    key={option.value}
+                                    accessibilityRole="button"
+                                    onPress={() => setPriceSort(option.value)}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                >
+                                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{option.label}</Text>
+                                </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+
+                      {hasActiveFilters ? (
+                          <Pressable accessibilityRole="button" onPress={resetFilters} style={styles.resetButton}>
+                            <Text style={styles.resetButtonText}>Réinitialiser les filtres</Text>
+                          </Pressable>
+                      ) : null}
+                    </View>
                 ) : null}
               </View>
 
@@ -448,62 +479,30 @@ export default function CatalogueScreen() {
                       const hasImage = Boolean(product.photoUrl?.trim()) && !failedImages[product.id];
                       return (
                           <View key={product.id} style={styles.card}>
-                            <View style={styles.cardHeading}>
-                              <Text style={styles.cardBrand}>{product.nomMarque ?? 'O’kit'}</Text>
-                              <Pressable
-                                  accessibilityLabel={
-                                    favoriteProductIds.has(product.id)
-                                        ? `Retirer ${product.titre} des favoris`
-                                        : `Ajouter ${product.titre} aux favoris`
-                                  }
-                                  accessibilityRole="button"
-                                  disabled={pendingProductIds.has(product.id)}
-                                  onPress={() => void toggleFavorite(product.id)}
-                                  style={({ pressed }) => [
-                                    styles.favoriteButton,
-                                    favoriteProductIds.has(product.id) && styles.favoriteButtonActive,
-                                    pressed && styles.favoriteButtonPressed,
-                                    pendingProductIds.has(product.id) && styles.favoriteButtonDisabled,
-                                  ]}
-                              >
-                                {pendingProductIds.has(product.id) ? (
-                                    <ActivityIndicator color="#c95f2b" size="small" />
-                                ) : (
-                                    <Text
-                                        style={
-                                          favoriteProductIds.has(product.id)
-                                              ? styles.favoriteIconActive
-                                              : styles.favoriteIcon
-                                        }
-                                    >
-                                      {favoriteProductIds.has(product.id) ? '♥' : '♡'}
+                            <View style={[styles.cardMedia, !hasImage && styles.cardMediaFallback]}>
+                              {hasImage ? (
+                                  <Image
+                                      source={{ uri: product.photoUrl! }}
+                                      style={styles.cardImage}
+                                      resizeMode="contain"
+                                      onError={() =>
+                                          setFailedImages((current) => ({ ...current, [product.id]: true }))
+                                      }
+                                  />
+                              ) : (
+                                  <View style={styles.jerseyFallback}>
+                                    <Text style={styles.jerseyFallbackClub} numberOfLines={2}>
+                                      {(product.nomEquipe ?? product.nomMarque ?? 'O’KIT').toUpperCase()}
                                     </Text>
-                                )}
-                              </Pressable>
+                                    <Text style={styles.jerseyFallbackCaption}>Maillot</Text>
+                                  </View>
+                              )}
                             </View>
                             <Link asChild href={`/produit/${product.id}`}>
                               <Pressable accessibilityRole="link" style={styles.cardBody}>
-                                <View style={[styles.cardMedia, !hasImage && styles.cardMediaFallback]}>
-                                  {hasImage ? (
-                                      <Image
-                                          source={{ uri: product.photoUrl! }}
-                                          style={styles.cardImage}
-                                          resizeMode="contain"
-                                          onError={() =>
-                                              setFailedImages((current) => ({ ...current, [product.id]: true }))
-                                          }
-                                      />
-                                  ) : (
-                                      <View style={styles.jerseyFallback}>
-                                        <Text style={styles.jerseyFallbackClub}>
-                                          {(product.nomEquipe ?? product.nomMarque ?? 'O’KIT').toUpperCase()}
-                                        </Text>
-                                        <Text style={styles.jerseyFallbackCaption}>Visuel bientôt disponible</Text>
-                                      </View>
-                                  )}
-                                </View>
-                                <Text style={styles.cardTitle}>{product.titre}</Text>
-                                <Text style={styles.cardMeta}>
+                                <Text style={styles.cardBrand}>{product.nomMarque ?? 'O’kit'}</Text>
+                                <Text style={styles.cardTitle} numberOfLines={2}>{product.titre}</Text>
+                                <Text style={styles.cardMeta} numberOfLines={1}>
                                   {[product.nomEquipe, product.nomSaison].filter(Boolean).join(' · ') || 'Collection O’kit'}
                                 </Text>
                                 <View style={styles.cardFooter}>
@@ -522,6 +521,36 @@ export default function CatalogueScreen() {
                                 </View>
                               </Pressable>
                             </Link>
+                            <Pressable
+                                accessibilityLabel={
+                                  favoriteProductIds.has(product.id)
+                                      ? `Retirer ${product.titre} des favoris`
+                                      : `Ajouter ${product.titre} aux favoris`
+                                }
+                                accessibilityRole="button"
+                                disabled={pendingProductIds.has(product.id)}
+                                onPress={() => void toggleFavorite(product.id)}
+                                style={({ pressed }) => [
+                                  styles.favoriteButton,
+                                  favoriteProductIds.has(product.id) && styles.favoriteButtonActive,
+                                  pressed && styles.favoriteButtonPressed,
+                                  pendingProductIds.has(product.id) && styles.favoriteButtonDisabled,
+                                ]}
+                            >
+                              {pendingProductIds.has(product.id) ? (
+                                  <ActivityIndicator color="#c95f2b" size="small" />
+                              ) : (
+                                  <Text
+                                      style={
+                                        favoriteProductIds.has(product.id)
+                                            ? styles.favoriteIconActive
+                                            : styles.favoriteIcon
+                                      }
+                                  >
+                                    {favoriteProductIds.has(product.id) ? '♥' : '♡'}
+                                  </Text>
+                              )}
+                            </Pressable>
                           </View>
                       );
                     })}
@@ -540,7 +569,7 @@ function stockLabel(level: ProductStockLevel) {
 }
 
 const styles = StyleSheet.create({
-  page: { flexGrow: 1, backgroundColor: '#f5f0e8', padding: 24, gap: 20 },
+  page: { flexGrow: 1, backgroundColor: '#f5f0e8', padding: 24, gap: 16 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f0e8' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 },
   eyebrow: { color: '#c95f2b', fontWeight: '800', letterSpacing: 2 },
@@ -549,13 +578,25 @@ const styles = StyleSheet.create({
   logout: { color: '#9f3e27', fontWeight: '700', paddingVertical: 8 },
   navigation: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   cartLink: { backgroundColor: '#c95f2b', color: '#fff' },
-  cardBody: { gap: 8 },
   navigationLink: { color: '#1f2925', fontWeight: '700', backgroundColor: '#fff', padding: 12, borderRadius: 10 },
-  filtersPanel: { backgroundColor: '#fff', borderRadius: 16, padding: 16, gap: 14 },
-  filtersHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  filtersHeading: { color: '#1f2925', fontSize: 16, fontWeight: '800' },
+  filtersPanel: { backgroundColor: '#fff', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  filtersHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
+  filtersHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  filtersHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  filtersHeading: { color: '#1f2925', fontSize: 15, fontWeight: '800' },
+  activeBadge: {
+    backgroundColor: '#c95f2b',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  activeBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
   resultsCount: { color: '#655f57', fontSize: 13, fontWeight: '700' },
-  filterGroup: { gap: 8 },
+  filtersToggle: { color: '#c95f2b', fontSize: 13, fontWeight: '800' },
+  inlineResetLink: { alignSelf: 'flex-start' },
+  inlineResetText: { color: '#c95f2b', fontSize: 12, fontWeight: '800', textDecorationLine: 'underline' },
+  filtersBody: { gap: 12, paddingTop: 4 },
+  filterGroup: { gap: 6 },
   filterLabel: { color: '#655f57', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8 },
   chipsRow: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
   chip: {
@@ -587,40 +628,46 @@ const styles = StyleSheet.create({
   noticeLink: { color: '#9f3e27', fontWeight: '800', textDecorationLine: 'underline' },
   button: { backgroundColor: '#c95f2b', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 12 },
   buttonText: { color: '#fff', fontWeight: '800' },
-  grid: { gap: 14 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, gap: 8 },
-  cardHeading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  grid: { gap: 12 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
   cardMedia: {
-    width: '100%',
-    height: 180,
+    width: 96,
+    height: 108,
     borderRadius: 12,
     backgroundColor: '#f5f0e8',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    marginBottom: 6,
-    padding: 12,
+    padding: 6,
   },
   cardMediaFallback: {
     borderWidth: 1,
     borderColor: '#e4ddd2',
   },
   cardImage: { width: '100%', height: '100%' },
-  jerseyFallback: { alignItems: 'center', gap: 6 },
-  jerseyFallbackClub: { color: '#1f2925', fontSize: 15, fontWeight: '800', letterSpacing: 1.2, textAlign: 'center' },
-  jerseyFallbackCaption: { color: '#655f57', fontSize: 12, fontWeight: '600' },
-  cardBrand: { color: '#c95f2b', fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
-  favoriteButton: { alignItems: 'center', borderColor: '#d9cec0', borderRadius: 22, borderWidth: 1, height: 44, justifyContent: 'center', width: 44 },
+  jerseyFallback: { alignItems: 'center', gap: 4 },
+  jerseyFallbackClub: { color: '#1f2925', fontSize: 11, fontWeight: '800', letterSpacing: 0.8, textAlign: 'center' },
+  jerseyFallbackCaption: { color: '#655f57', fontSize: 10, fontWeight: '600' },
+  cardBody: { flex: 1, gap: 4, justifyContent: 'space-between' },
+  cardBrand: { color: '#c95f2b', fontSize: 11, fontWeight: '800', letterSpacing: 1.4, textTransform: 'uppercase' },
+  favoriteButton: { alignItems: 'center', borderColor: '#d9cec0', borderRadius: 20, borderWidth: 1, height: 40, justifyContent: 'center', width: 40 },
   favoriteButtonActive: { backgroundColor: '#fff0e8', borderColor: '#c95f2b' },
   favoriteButtonPressed: { opacity: 0.72, transform: [{ scale: 0.96 }] },
   favoriteButtonDisabled: { opacity: 0.55 },
-  favoriteIcon: { color: '#655f57', fontSize: 25, lineHeight: 29 },
-  favoriteIconActive: { color: '#c95f2b', fontSize: 23, lineHeight: 29 },
-  cardTitle: { color: '#1f2925', fontSize: 21, fontWeight: '800' },
-  cardMeta: { color: '#716a61' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-  price: { color: '#1f2925', fontSize: 20, fontWeight: '800' },
-  inStock: { color: '#337357', fontWeight: '700' },
-  lowStock: { color: '#c95f2b', fontWeight: '700' },
-  outOfStock: { color: '#9f3e27', fontWeight: '700' },
+  favoriteIcon: { color: '#655f57', fontSize: 22, lineHeight: 26 },
+  favoriteIconActive: { color: '#c95f2b', fontSize: 21, lineHeight: 26 },
+  cardTitle: { color: '#1f2925', fontSize: 17, fontWeight: '800' },
+  cardMeta: { color: '#716a61', fontSize: 13 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  price: { color: '#1f2925', fontSize: 17, fontWeight: '800' },
+  inStock: { color: '#337357', fontSize: 13, fontWeight: '700' },
+  lowStock: { color: '#c95f2b', fontSize: 13, fontWeight: '700' },
+  outOfStock: { color: '#9f3e27', fontSize: 13, fontWeight: '700' },
 });

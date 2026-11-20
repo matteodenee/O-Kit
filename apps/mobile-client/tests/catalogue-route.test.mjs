@@ -45,6 +45,9 @@ test('the catalogue screen renders jersey images, brand/season/club filters and 
   const catalogueRoute = await readFile(join(projectDirectory, 'src/app/catalogue.tsx'), 'utf8');
 
   assert.match(catalogueRoute, /<Image[\s\S]*product\.photoUrl/u);
+  assert.match(catalogueRoute, /filtersExpanded/u);
+  assert.match(catalogueRoute, /Afficher/u);
+  assert.match(catalogueRoute, /Masquer/u);
   assert.match(catalogueRoute, /Marque/u);
   assert.match(catalogueRoute, /Saison/u);
   assert.match(catalogueRoute, /Club \/ Équipe/u);

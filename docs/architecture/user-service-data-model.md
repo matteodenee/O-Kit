@@ -51,6 +51,23 @@ Un index unique PostgreSQL partiel sur `user_profile_id` lorsque
 jamais deux adresses actives par défaut. Le service garantit en plus que la
 première adresse active est celle par défaut.
 
+## Table user_wishlist_items
+
+Une entrée associe un profil métier à un identifiant produit appartenant au
+Catalogue. Il n'existe volontairement aucune clé étrangère vers la base
+Catalogue.
+
+| Colonne | Type | Contraintes | Rôle |
+| --- | --- | --- | --- |
+| `id` | UUID | clé primaire | Identifiant technique de l'entrée |
+| `user_profile_id` | UUID | clé étrangère non nulle vers `user_profiles` | Profil propriétaire |
+| `product_id` | BIGINT | non nul, strictement positif | Identifiant stable du produit Catalogue |
+| `added_at` | TIMESTAMP WITH TIME ZONE | non nul | Date d'ajout |
+
+La paire `(user_profile_id, product_id)` est unique. Un index sur `product_id`
+permet de retirer efficacement un produit de toutes les wishlists après un
+événement de désactivation.
+
 ## Données volontairement absentes
 
 - mot de passe et credentials ;
@@ -69,5 +86,5 @@ La tranche adresses appartient à `user-service` conformément à l'ADR 0008. Le
 futur service commande recevra un instantané d'expédition et ne lira jamais
 cette base.
 
-La wishlist ne sera modélisée qu'après stabilisation des identifiants et du
-contrat de consultation du catalogue.
+La wishlist appartient à `user-service` selon l'ADR 0010. Elle ne duplique ni
+le titre, ni le prix, ni le statut du produit Catalogue.

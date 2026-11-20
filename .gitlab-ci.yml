@@ -77,3 +77,40 @@ test:ms-catalogue:
       changes:
         - backend/ms-catalogue/**/*
         - .gitlab-ci.yml
+
+test:ms-utilisateur:
+  stage: test
+  image: maven:3.9.11-eclipse-temurin-21-alpine
+  services:
+    - name: docker:27.3.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - cd backend/ms-utilisateur
+    - mvn --batch-mode --no-transfer-progress clean verify
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - backend/ms-utilisateur/target/surefire-reports/TEST-*.xml
+        - backend/ms-utilisateur/target/failsafe-reports/TEST-*.xml
+    paths:
+      - backend/ms-utilisateur/target/surefire-reports/
+      - backend/ms-utilisateur/target/failsafe-reports/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/ms-utilisateur/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - backend/ms-utilisateur/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - backend/ms-utilisateur/**/*
+        - .gitlab-ci.yml

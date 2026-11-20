@@ -1,6 +1,7 @@
 package fr.polytech.okit.user.profile;
 
 import fr.polytech.okit.user.address.UserAddressRepository;
+import fr.polytech.okit.user.wishlist.WishlistItemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,10 +52,14 @@ class UserProfilePersistenceIntegrationTest {
     private UserAddressRepository addressRepository;
 
     @Autowired
+    private WishlistItemRepository wishlistRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearProfiles() {
+        wishlistRepository.deleteAll();
         addressRepository.deleteAll();
         repository.deleteAll();
     }
@@ -64,7 +69,7 @@ class UserProfilePersistenceIntegrationTest {
         Integer successfulMigrations = jdbcTemplate.queryForObject(
                 "select count(*) from flyway_schema_history where success = true",
                 Integer.class);
-        assertThat(successfulMigrations).isEqualTo(2);
+        assertThat(successfulMigrations).isEqualTo(3);
 
         mockMvc.perform(put("/api/v1/users/me")
                         .with(jwt().jwt(token -> token
@@ -175,6 +180,30 @@ class UserProfilePersistenceIntegrationTest {
         mockMvc.perform(get("/api/v1/users/me/addresses/{addressId}", addressId)
                         .with(buyerJwt("other-subject")))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void persistsWishlistIdempotentlyForBuyer() throws Exception {
+        String subject = "wishlist-buyer";
+        createProfile(subject);
+
+        mockMvc.perform(put("/api/v1/users/me/wishlist/{productId}", 42)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(put("/api/v1/users/me/wishlist/{productId}", 42)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/users/me/wishlist")
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].productId").value(42));
+
+        mockMvc.perform(delete("/api/v1/users/me/wishlist/{productId}", 42)
+                        .with(buyerJwt(subject)))
+                .andExpect(status().isNoContent());
+        assertThat(wishlistRepository.count()).isZero();
     }
 
     private void createProfile(String subject) throws Exception {

@@ -30,8 +30,9 @@ continue d'utiliser `/api/v1/users/**` sur le port 8081.
 - le client n'appelle jamais directement le port 8082 ;
 - les écritures Catalogue ne sont pas exposées par cette route acheteur ;
 - le bearer token n'est ni journalisé ni persisté par le Catalogue ;
-- RabbitMQ n'intervient pas dans ce parcours, conformément à
-  [l'ADR 0009](../decisions/0009-rabbitmq-interservice-messaging.md).
+- RabbitMQ n'intervient pas dans la lecture synchrone du Catalogue. Il est
+  réservé à la propagation des changements de statut décrite dans
+  [`user-wishlist-rabbitmq.md`](user-wishlist-rabbitmq.md).
 
 ## Exécution locale
 
@@ -74,4 +75,5 @@ est documenté dans
 - les services Utilisateur et Catalogue démarrent avec leurs bases logiques
   indépendantes ;
 - le seed de développement est idempotent et préserve les produits existants ;
-- aucune ressource RabbitMQ n'est requise pour ce parcours.
+- la lecture du Catalogue ne dépend pas de RabbitMQ ; RabbitMQ est requis
+  uniquement pour synchroniser la suppression des favoris désactivés.

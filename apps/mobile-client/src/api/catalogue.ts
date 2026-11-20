@@ -22,6 +22,25 @@ export type ProductPage = {
   isLast: boolean;
 };
 
+type ProductReference = {
+  nom?: string;
+  nomMarque?: string;
+};
+
+export type ProductDetail = {
+  id: number;
+  titre: string;
+  description: string | null;
+  prixDeBaseHT: number;
+  prixTTC: number;
+  prixApresPromotionTTC: number;
+  enStock: boolean;
+  statut: 'ACTIF' | 'DESACTIVE';
+  marque: ProductReference | null;
+  saison: ProductReference | null;
+  equipe: ProductReference | null;
+};
+
 export class CatalogueApiError extends Error {
   constructor(public readonly status: number) {
     super(
@@ -42,4 +61,22 @@ export async function getActiveProducts(authenticatedFetch: AuthenticatedFetch) 
   }
 
   return response.json() as Promise<ProductPage>;
+}
+
+export async function getProductById(
+  authenticatedFetch: AuthenticatedFetch,
+  productId: number
+): Promise<ProductDetail | null> {
+  const response = await authenticatedFetch(
+    `${apiBaseUrl}/api/v1/products/${encodeURIComponent(productId)}`
+  );
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new CatalogueApiError(response.status);
+  }
+
+  return response.json() as Promise<ProductDetail>;
 }

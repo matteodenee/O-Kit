@@ -41,6 +41,11 @@ spring:
               uri: ${COMMANDE_SERVICE_URL:http://localhost:8085}
               predicates:
                   - Path=/api/v1/panier/**,/api/v1/commandes/**
+            - id: ms-chatbot
+              uri: ${CHATBOT_SERVICE_URL:http://localhost:8086}
+              predicates:
+                  - Path=/api/v1/chat/**
+                  - Method=POST
             - id: ms-stock-public
               uri: ${STOCK_SERVICE_URL:http://localhost:8083}
               predicates:

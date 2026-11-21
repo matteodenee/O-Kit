@@ -82,6 +82,31 @@ services:
       keycloak:
         condition: service_started
 
+  # Microservice Chatbot (assistant acheteur, LLM de la plateforme IA Polytech)
+  chatbot-service:
+    build:
+      context: ./backend/ms-chatbot
+    container_name: okit-ms-chatbot
+    environment:
+      - SERVER_PORT=8086
+      - OIDC_ISSUER_URI=http://localhost:8090/realms/okit
+      - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+      # mock (défaut) : aucune requête LLM consommée ; polytech : vrai LLM
+      - CHATBOT_MODE=${CHATBOT_MODE:-mock}
+      - CHATBOT_QUESTIONS_PAR_JOUR=${CHATBOT_QUESTIONS_PAR_JOUR:-3}
+      - LLM_MODEL=${LLM_MODEL:-souverain-llm-qwen}
+      # Clé personnelle ou de groupe : uniquement dans .env, jamais versionnée
+      - POLYTECH_API_KEY=${POLYTECH_API_KEY:-cle-non-configuree}
+      - CATALOGUE_SERVICE_URL=http://catalogue-service:8082
+      - STOCK_SERVICE_URL=http://stock-service:8083
+      - COMMANDE_SERVICE_URL=http://commande-service:8085
+    ports:
+      - "127.0.0.1:8086:8086"
+    depends_on:
+      keycloak:
+        condition: service_started
+    mem_limit: 512m
+
   mailpit:
     image: axllent/mailpit:v1.31.5
     restart: unless-stopped
@@ -237,6 +262,7 @@ services:
       CATALOGUE_SERVICE_URL: http://catalogue-service:8082
       STOCK_SERVICE_URL: http://stock-service:8083
       COMMANDE_SERVICE_URL: http://commande-service:8085
+      CHATBOT_SERVICE_URL: http://chatbot-service:8086
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
       CORS_ALLOWED_ORIGIN: http://localhost:19006

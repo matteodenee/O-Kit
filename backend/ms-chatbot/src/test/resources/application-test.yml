@@ -1,0 +1,14 @@
+spring:
+  ai:
+    openai:
+      api-key: cle-de-test        # jamais utilisée : aucun test n'appelle le LLM
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:0/test-issuer   # JWT simulés via jwt() : jamais appelé
+
+okit:
+  chatbot:
+    mode: polytech              # active le quota ; l'Assistant est remplacé par un mock dans les tests
+    questions-par-jour: 2

@@ -1,0 +1,76 @@
+server:
+  port: ${SERVER_PORT:8086}
+  shutdown: graceful
+
+spring:
+  application:
+    name: ms-chatbot
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+  # Plateforme IA Polytech, adresse compatible OpenAI.
+  # Spring AI ajoute lui-même /v1/chat/completions à base-url.
+  ai:
+    # Seul le chat est utilisé : on coupe les autres modèles OpenAI (voix, images, embeddings...)
+    # que Spring AI créerait sinon, chacun exigeant une clé.
+    model:
+      chat: openai
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    # Peu de nouvelles tentatives : chacune peut consommer une requête du quota de la clé.
+    retry:
+      max-attempts: 2
+      backoff:
+        initial-interval: 1s
+    openai:
+      base-url: ${LLM_BASE_URL:https://ollama.polytech.lange.xyz/openai}
+      # La clé n'est JAMAIS écrite ici : elle vient de .env (local) ou d'un Secret (k8s).
+      # Valeur par défaut factice pour que le mode "mock" démarre sans clé ;
+      # en mode "polytech", LlmAssistant refuse de démarrer avec cette valeur.
+      api-key: ${POLYTECH_API_KEY:cle-non-configuree}
+      chat:
+        options:
+          model: ${LLM_MODEL:souverain-llm-qwen}
+          temperature: 0.2
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8090/realms/okit}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8090/realms/okit/protocol/openid-connect/certs}
+
+okit:
+  chatbot:
+    # polytech : appelle le vrai LLM (consomme le quota de la clé, 10 req/jour !)
+    # mock     : réponses simulées, appelle quand même les vrais services O'Kit
+    mode: ${CHATBOT_MODE:mock}
+    # Nombre max de questions par acheteur et par jour (protège le quota partagé du groupe).
+    # Une question peut coûter 2 à 3 requêtes LLM quand des outils sont utilisés.
+    questions-par-jour: ${CHATBOT_QUESTIONS_PAR_JOUR:3}
+    historique-max: 10            # nb max de messages précédents renvoyés au LLM
+    message-max: 1000             # nb max de caractères d'une question
+    services:
+      catalogue-url: ${CATALOGUE_SERVICE_URL:http://localhost:8082}
+      stock-url: ${STOCK_SERVICE_URL:http://localhost:8083}
+      commande-url: ${COMMANDE_SERVICE_URL:http://localhost:8085}
+    security:
+      buyer-role: BUYER
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    com.okit.chatbot: INFO

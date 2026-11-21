@@ -169,6 +169,9 @@ export default function CatalogueScreen() {
         <Link href="/commandes" style={styles.navigationLink}>
           Mes commandes
         </Link>
+        <Link href="/assistant" style={styles.navigationLink}>
+          Assistant
+        </Link>
         <Link href="/panier" style={[styles.navigationLink, styles.cartLink]}>
           Mon panier
         </Link>

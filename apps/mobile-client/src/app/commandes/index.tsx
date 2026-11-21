@@ -74,6 +74,7 @@ export default function CommandesScreen() {
           </View>
           <View style={ui.headerActions}>
             <BoutonLien href="/catalogue" label="Catalogue" />
+            <BoutonLien href="/assistant" label="Une question ?" />
             <BoutonLien href="/panier" label="Mon panier" variante="accent" />
           </View>
         </View>

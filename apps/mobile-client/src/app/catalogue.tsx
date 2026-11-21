@@ -248,7 +248,7 @@ export default function CatalogueScreen() {
               <Link asChild href={`/produit/${product.id}`}>
                 <Pressable
                   accessibilityRole="link"
-                  style={({ pressed }) => [styles.cardBody, pressed && styles.cardPressed]}
+                  style={styles.cardBody}
                 >
                   <Text style={styles.cardTitle}>{product.titre}</Text>
                   <Text style={styles.cardMeta}>
@@ -281,7 +281,6 @@ const styles = StyleSheet.create({
   navigation: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   cartLink: { backgroundColor: '#c95f2b', color: '#fff' },
   cardBody: { gap: 8 },
-  cardPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   navigationLink: { color: '#1f2925', fontWeight: '700', backgroundColor: '#fff', padding: 12, borderRadius: 10 },
   statePanel: { backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', gap: 12 },
   stateTitle: { color: '#1f2925', fontSize: 20, fontWeight: '800' },

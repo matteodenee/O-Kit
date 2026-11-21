@@ -17,6 +17,7 @@ export const couleurs = {
   vertFond: '#dcebe5',
   danger: '#a23d2b',
   dangerFond: '#fde9e5',
+  bleu: '#24548f',
 };
 
 export function formatPrix(montant: number) {
@@ -45,6 +46,13 @@ export function styleStatut(statut: StatutCommande) {
   if (statut === 'ANNULEE') return { backgroundColor: couleurs.dangerFond, color: couleurs.danger };
   if (statut === 'LIVREE' || statut === 'EXPEDIEE') return { backgroundColor: couleurs.vertFond, color: '#1b614f' };
   return { backgroundColor: '#f6e3d6', color: couleurs.eyebrow };
+}
+
+/** Couleur du numéro de commande dans la liste : bleu en cours, vert livrée, rouge annulée. */
+export function couleurStatut(statut: StatutCommande) {
+  if (statut === 'LIVREE') return couleurs.vert;
+  if (statut === 'ANNULEE') return couleurs.danger;
+  return couleurs.bleu;
 }
 
 export function estAnnulable(statut: StatutCommande) {

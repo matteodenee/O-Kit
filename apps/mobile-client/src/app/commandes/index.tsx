@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import { Commande, getCommandes } from '../../api/commande';
 import { useAuth } from '../../auth/AuthProvider';
 import { BoutonLien } from '../../commande/BoutonLien';
-import { couleurs, formatDate, formatPrix, libelleStatut, styleStatut, ui } from '../../commande/ui';
+import { couleurs, couleurStatut, formatPrix, libelleStatut, ui } from '../../commande/ui';
 
 export default function CommandesScreen() {
   const { accessToken, authenticatedFetch, isReady } = useAuth();
@@ -102,30 +102,23 @@ export default function CommandesScreen() {
         ) : null}
 
         <View style={styles.liste}>
-          {commandes.map((commande) => {
-            const nbArticles = commande.lignes
-              .filter((l) => l.statut === 'ACTIVE')
-              .reduce((total, l) => total + l.quantite, 0);
-            return (
-              <Link asChild href={`/commandes/${commande.idCommande}`} key={commande.idCommande}>
-                <Pressable accessibilityRole="button" style={({ pressed }) => [ui.card, pressed && ui.pressed]}>
-                  <View style={ui.row}>
-                    <Text style={ui.cardTitle}>Commande n° {commande.idCommande}</Text>
-                    <Text style={[ui.badge, styleStatut(commande.statut)]}>
-                      {libelleStatut[commande.statut].toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={[ui.cardMeta, styles.meta]}>
-                    {formatDate(commande.dateCommande)} · {nbArticles} article{nbArticles > 1 ? 's' : ''}
-                  </Text>
-                  <View style={[ui.row, styles.footer]}>
-                    <Text style={styles.total}>{formatPrix(commande.totalTtc)}</Text>
-                    <Text style={ui.actionText}>Voir le détail →</Text>
-                  </View>
-                </Pressable>
-              </Link>
-            );
-          })}
+          {commandes.map((commande) => (
+            <Link asChild href={`/commandes/${commande.idCommande}`} key={commande.idCommande}>
+              <Pressable
+                accessibilityLabel={`Commande n° ${commande.idCommande}, ${libelleStatut[commande.statut]}, ${formatPrix(commande.totalTtc)}`}
+                accessibilityRole="link"
+                style={styles.ligne}
+              >
+                <Text style={[styles.numero, { color: couleurStatut(commande.statut) }]}>
+                  Commande n° {commande.idCommande}
+                </Text>
+                <View style={styles.droite}>
+                  <Text style={styles.total}>{formatPrix(commande.totalTtc)}</Text>
+                  <Text style={styles.chevron}>›</Text>
+                </View>
+              </Pressable>
+            </Link>
+          ))}
         </View>
       </View>
     </ScrollView>
@@ -133,9 +126,25 @@ export default function CommandesScreen() {
 }
 
 const styles = StyleSheet.create({
-  liste: { gap: 14 },
-  meta: { marginTop: 6 },
-  footer: { borderTopColor: '#e3d9ca', borderTopWidth: 1, marginTop: 14, paddingTop: 12 },
-  total: { color: '#17322c', fontSize: 20, fontWeight: '800' },
+  liste: {
+    backgroundColor: couleurs.carte,
+    borderColor: couleurs.bordure,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  ligne: {
+    alignItems: 'center',
+    borderBottomColor: '#e3d9ca',
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  numero: { fontSize: 17, fontWeight: '800' },
+  droite: { alignItems: 'center', flexDirection: 'row', gap: 12 },
+  total: { color: couleurs.encre, fontSize: 16, fontWeight: '800' },
+  chevron: { color: couleurs.attenue, fontSize: 22, fontWeight: '700' },
   alignStart: { alignSelf: 'flex-start' },
 });

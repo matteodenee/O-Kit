@@ -317,7 +317,7 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
       <Link asChild href="/catalogue">
         <Pressable
           accessibilityRole="button"
-          style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+          style={styles.secondaryButton}
         >
           <Text style={styles.secondaryButtonText}>Retour au catalogue</Text>
         </Pressable>
@@ -328,7 +328,7 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
           <Link asChild href="/addresses">
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              style={styles.secondaryButton}
             >
               <Text style={styles.secondaryButtonText}>Gérer mes adresses</Text>
             </Pressable>
@@ -336,7 +336,7 @@ function AuthenticatedProfile({ authenticatedFetch, logout, user }: Authenticate
           <Link asChild href="/wishlist">
             <Pressable
               accessibilityRole="button"
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+              style={styles.secondaryButton}
             >
               <Text style={styles.secondaryButtonText}>Voir mes favoris</Text>
             </Pressable>

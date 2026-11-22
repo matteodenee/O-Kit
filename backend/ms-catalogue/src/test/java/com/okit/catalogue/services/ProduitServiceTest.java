@@ -122,7 +122,8 @@ class ProduitServiceTest {
                 "2024/2025",
                 "PSG",
                 ProduitStatut.ACTIF,
-                List.of()
+                List.of(),
+                null
         );
 
         detailDto = new ProduitDetailDto(
@@ -446,7 +447,7 @@ class ProduitServiceTest {
         when(produitRepository.findByFilters(
                 null, null, null, "Paris Saint-Germain", "2024/2025", "Nike", ProduitStatut.ACTIF, pageable
         )).thenReturn(produitPage);
-        when(produitMapper.toSummaryDto(produit)).thenReturn(summaryDto);
+        when(produitMapper.toSummaryDto(produit, List.of())).thenReturn(summaryDto);
 
         PageResponse<ProduitSummaryDto> response = produitService.getProducts(
                 null, null, null, "  Paris Saint-Germain ", " 2024/2025 ", " Nike ", ProduitStatut.ACTIF, pageable

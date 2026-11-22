@@ -167,7 +167,7 @@ class ProduitMapperTest {
             produit.addVariante(new Variante(produit, taille));
         }
 
-        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit);
+        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit, java.util.List.of());
         ProduitDetailDto detail = produitMapper.toDetailDto(produit);
 
         assertThat(summary.photoUrl()).isEqualTo("data:image/svg+xml;utf8,<svg></svg>");

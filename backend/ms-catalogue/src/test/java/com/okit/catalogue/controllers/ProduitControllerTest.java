@@ -80,7 +80,8 @@ class ProduitControllerTest {
                 "2024/2025",
                 "PSG",
                 ProduitStatut.ACTIF,
-                List.of()
+                List.of(),
+                null
         );
 
         detailDto = new ProduitDetailDto(
@@ -400,6 +401,7 @@ class ProduitControllerTest {
                 "2025/2026",
                 "Paris Saint-Germain",
                 ProduitStatut.ACTIF,
+                List.of(),
                 "data:image/svg+xml;utf8,<svg></svg>"
         );
         PageResponse<ProduitSummaryDto> pageResponse = new PageResponse<>(

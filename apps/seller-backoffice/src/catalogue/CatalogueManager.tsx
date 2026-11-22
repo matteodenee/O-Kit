@@ -9,12 +9,40 @@ import {
   listAllProducts,
   updateProduct,
 } from '../api/catalogue';
+import { listStocks, type StockStatus } from '../api/stock';
 
 type CatalogueManagerProps = {
   request: CatalogueRequest;
 };
 
 type PriceSort = 'default' | 'prix_asc' | 'prix_desc';
+
+/**
+ * Niveau de stock d'un produit calculé à partir de ses tailles (ms-stock).
+ * Si ms-stock est indisponible, on retombe sur le drapeau Catalogue.
+ */
+function resolveStockLevel(
+  product: ProductSummary,
+  stockByVariant: Map<number, StockStatus> | null
+): StockStatus {
+  const varianteIds = product.varianteIds ?? [];
+  if (!stockByVariant || varianteIds.length === 0) {
+    return product.enStock ? 'IN_STOCK' : 'OUT_OF_STOCK';
+  }
+  let hasLowStock = false;
+  for (const varianteId of varianteIds) {
+    const status = stockByVariant.get(varianteId) ?? 'OUT_OF_STOCK';
+    if (status === 'IN_STOCK') return 'IN_STOCK';
+    if (status === 'LOW_STOCK') hasLowStock = true;
+  }
+  return hasLowStock ? 'LOW_STOCK' : 'OUT_OF_STOCK';
+}
+
+function stockLabel(status: StockStatus) {
+  if (status === 'OUT_OF_STOCK') return 'Rupture';
+  if (status === 'LOW_STOCK') return 'Derniers exemplaires';
+  return 'Disponible';
+}
 
 type ProductForm = {
   couleursPrincipales: string;
@@ -61,6 +89,7 @@ function uniqueSorted(values: (string | null | undefined)[]): string[] {
 
 export default function CatalogueManager({ request }: CatalogueManagerProps) {
   const [products, setProducts] = useState<ProductSummary[]>([]);
+  const [stockByVariant, setStockByVariant] = useState<Map<number, StockStatus> | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
   const [form, setForm] = useState<ProductForm | null>(null);
   const [search, setSearch] = useState('');

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { getProduct, listAllProducts, type CatalogueRequest, type ProductDetail } from '../api/catalogue';
 import {
     adjustStock, createStock, createStocksBulk, listMovements, listStocks, restock, setThreshold,
@@ -19,11 +19,82 @@ const REASON_LABEL: Record<MovementDto['reason'], string> = {
     ORDER_CANCELLED: 'Commande annulée',
 };
 
-function askInt(message: string, def: string, min: number): number | null {
-    const raw = window.prompt(message, def);
-    if (raw === null || raw.trim() === '') return null;
-    const n = Number(raw);
-    return Number.isInteger(n) && n >= min ? n : null;
+type StockPrompt = {
+    title: string;
+    label: string;
+    defaultValue: string;
+    min: number;
+    confirmLabel: string;
+    run: (value: number) => Promise<void>;
+};
+
+function QuantityDialog({ prompt, onClose }: { prompt: StockPrompt; onClose: () => void }) {
+    const [value, setValue] = useState(prompt.defaultValue);
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !busy) onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [busy, onClose]);
+
+    const submit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const parsed = Number(value.trim());
+        if (!Number.isInteger(parsed) || parsed < prompt.min) {
+            setError(`Saisis un nombre entier supérieur ou égal à ${prompt.min}.`);
+            return;
+        }
+
+        setBusy(true);
+        setError(null);
+        try {
+            await prompt.run(parsed);
+            onClose();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Opération impossible.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <div
+            className="modal-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !busy) onClose();
+            }}
+        >
+            <form className="modal-card" role="dialog" aria-modal="true" aria-labelledby="stock-dialog-title" onSubmit={submit}>
+                <h2 id="stock-dialog-title">{prompt.title}</h2>
+                <label className="modal-field">
+                    <span>{prompt.label}</span>
+                    <input
+                        autoFocus
+                        inputMode="numeric"
+                        min={prompt.min}
+                        step={1}
+                        type="number"
+                        value={value}
+                        onChange={(event) => setValue(event.target.value)}
+                    />
+                </label>
+                {error && <p className="alert error" role="alert">{error}</p>}
+                <div className="modal-actions">
+                    <button type="button" className="secondary-action" disabled={busy} onClick={onClose}>
+                        Annuler
+                    </button>
+                    <button type="submit" className="primary-action" disabled={busy}>
+                        {busy ? 'En cours…' : prompt.confirmLabel}
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
 }
 
 export default function StockManager({ request }: { request: CatalogueRequest }) {
@@ -34,6 +105,7 @@ export default function StockManager({ request }: { request: CatalogueRequest })
     const [query, setQuery] = useState('');
     const [onlyAlerts, setOnlyAlerts] = useState(false);
     const [history, setHistory] = useState<{ variantId: number; rows: MovementDto[] } | null>(null);
+    const [stockPrompt, setStockPrompt] = useState<StockPrompt | null>(null);
 
     const load = useCallback(async () => {
         try {
@@ -68,43 +140,71 @@ export default function StockManager({ request }: { request: CatalogueRequest })
             window.dispatchEvent(new Event('stock:changed'));
             await refreshHistory(variantId);
         } catch (e) {
-            setError(e instanceof Error ? e.message : failMsg);
+            const message = e instanceof Error ? e.message : failMsg;
+            setError(message);
+            throw new Error(message, { cause: e });
         }
     };
 
-    const initOne = (id: number) => {
-        const q = askInt('Quantité initiale ?', '10', 0);
-        if (q !== null) void apply(id, () => createStock(request, id, q), 'Échec de l’initialisation.');
-    };
-    const add = (id: number) => {
-        const q = askInt('Quantité à ajouter ?', '10', 1);
-        if (q !== null) void apply(id, () => restock(request, id, q), 'Échec de l’ajout.');
-    };
-    const correct = (id: number, current: number) => {
-        const q = askInt('Stock réel après inventaire ?', String(current), 0);
-        if (q !== null) void apply(id, () => adjustStock(request, id, q), 'Échec de la correction.');
-    };
-    const editThreshold = (id: number, current: number) => {
-        const q = askInt('Seuil d’alerte (stock bas sous cette valeur) ?', String(current), 0);
-        if (q !== null) void apply(id, () => setThreshold(request, id, q), 'Échec de la mise à jour du seuil.');
-    };
+    const initOne = (id: number) => setStockPrompt({
+        title: 'Initialiser le stock',
+        label: 'Quantité initiale',
+        defaultValue: '10',
+        min: 0,
+        confirmLabel: 'Initialiser',
+        run: (quantity) => apply(id, () => createStock(request, id, quantity), 'Échec de l’initialisation.'),
+    });
 
-    const initAll = async (ids: number[]) => {
-        const q = askInt('Quantité initiale pour chaque taille manquante ?', '10', 0);
-        if (q === null) return;
-        try {
-            const created = await createStocksBulk(request, ids, q);
-            setStocks((m) => {
-                const next = new Map(m);
-                created.forEach((s) => next.set(s.variantId, s));
-                return next;
-            });
-            setError(null);
-            window.dispatchEvent(new Event('stock:changed'));
-        } catch (e) {
-            setError(e instanceof Error ? e.message : 'Échec de l’initialisation.');
-        }
-    };
+    const add = (id: number) => setStockPrompt({
+        title: 'Ajouter du stock',
+        label: 'Quantité à ajouter',
+        defaultValue: '10',
+        min: 1,
+        confirmLabel: 'Ajouter',
+        run: (quantity) => apply(id, () => restock(request, id, quantity), 'Échec de l’ajout.'),
+    });
+
+    const correct = (id: number, current: number) => setStockPrompt({
+        title: 'Corriger le stock',
+        label: 'Stock réel après inventaire',
+        defaultValue: String(current),
+        min: 0,
+        confirmLabel: 'Corriger',
+        run: (quantity) => apply(id, () => adjustStock(request, id, quantity), 'Échec de la correction.'),
+    });
+
+    const editThreshold = (id: number, current: number) => setStockPrompt({
+        title: 'Modifier le seuil d’alerte',
+        label: 'Seuil d’alerte (stock bas sous cette valeur)',
+        defaultValue: String(current),
+        min: 0,
+        confirmLabel: 'Enregistrer',
+        run: (quantity) => apply(id, () => setThreshold(request, id, quantity), 'Échec de la mise à jour du seuil.'),
+    });
+
+    const initAll = (ids: number[]) => setStockPrompt({
+        title: 'Initialiser les tailles manquantes',
+        label: 'Quantité initiale pour chaque taille',
+        defaultValue: '10',
+        min: 0,
+        confirmLabel: 'Initialiser',
+        run: async (quantity) => {
+            try {
+                const created = await createStocksBulk(request, ids, quantity);
+                setStocks((m) => {
+                    const next = new Map(m);
+                    created.forEach((s) => next.set(s.variantId, s));
+                    return next;
+                });
+                setError(null);
+                window.dispatchEvent(new Event('stock:changed'));
+            } catch (e) {
+                const message = e instanceof Error ? e.message : 'Échec de l’initialisation.';
+                setError(message);
+                throw new Error(message, { cause: e });
+            }
+        },
+    });
 
     const toggleHistory = async (variantId: number) => {
         if (history?.variantId === variantId) { setHistory(null); return; }
@@ -244,6 +344,10 @@ export default function StockManager({ request }: { request: CatalogueRequest })
                     </details>
                 );
             })}
+
+            {stockPrompt && (
+                <QuantityDialog prompt={stockPrompt} onClose={() => setStockPrompt(null)} />
+            )}
         </section>
     );
 }

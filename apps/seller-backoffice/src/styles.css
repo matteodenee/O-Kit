@@ -250,3 +250,44 @@ button { cursor: pointer; }
 .row-history time { color: #667; }
 .plus { color: #1e6b36; }
 .minus { color: #b3261e; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(23, 63, 44, .42);
+}
+
+.modal-card {
+  display: grid;
+  gap: 16px;
+  width: min(420px, 100%);
+  padding: 22px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(23, 40, 30, .25);
+}
+
+.modal-card h2 { margin: 0; font-size: 20px; }
+
+.modal-field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+
+.modal-field input {
+  padding: 10px 12px;
+  font: inherit;
+  font-weight: 400;
+  border: 1px solid #c9d1c8;
+  border-radius: 8px;
+}
+
+.modal-field input:focus {
+  outline: 2px solid #9fbfa9;
+  outline-offset: 1px;
+}
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions button { padding: 10px 16px; border-radius: 8px; }

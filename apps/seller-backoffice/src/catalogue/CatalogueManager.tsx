@@ -14,11 +14,14 @@ type CatalogueManagerProps = {
   request: CatalogueRequest;
 };
 
+type PriceSort = 'default' | 'prix_asc' | 'prix_desc';
+
 type ProductForm = {
   couleursPrincipales: string;
   description: string;
   estFlocable: boolean;
   impactEnvi: string;
+  photoUrl: string;
   poids: string;
   prixDeBase: string;
   statut: ProductStatus;
@@ -31,6 +34,7 @@ function formFromProduct(product: ProductDetail): ProductForm {
     description: product.description ?? '',
     estFlocable: product.estFlocable ?? false,
     impactEnvi: product.impactEnvi ?? '',
+    photoUrl: product.photoUrl ?? '',
     poids: product.poids?.toString() ?? '',
     prixDeBase: product.prixDeBaseHT.toString(),
     statut: product.statut,
@@ -45,6 +49,16 @@ function formatPrice(value: number) {
   }).format(value);
 }
 
+function uniqueSorted(values: (string | null | undefined)[]): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  ).sort((a, b) => a.localeCompare(b, 'fr'));
+}
+
 export default function CatalogueManager({ request }: CatalogueManagerProps) {
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
@@ -52,6 +66,12 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'TOUS' | ProductStatus>('TOUS');
   const [stockFilter, setStockFilter] = useState<'TOUS' | 'EN_STOCK' | 'RUPTURE'>('TOUS');
+  const [brandFilter, setBrandFilter] = useState<string>('TOUTES');
+  const [seasonFilter, setSeasonFilter] = useState<string>('TOUTES');
+  const [teamFilter, setTeamFilter] = useState<string>('TOUS');
+  const [priceSort, setPriceSort] = useState<PriceSort>('default');
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -63,6 +83,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
     setError(null);
     try {
       setProducts(await listAllProducts(request));
+      setFailedImages({});
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Chargement du catalogue impossible.');
     } finally {
@@ -74,7 +95,10 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
     let active = true;
     listAllProducts(request)
       .then((loadedProducts) => {
-        if (active) setProducts(loadedProducts);
+        if (active) {
+          setProducts(loadedProducts);
+          setFailedImages({});
+        }
       })
       .catch((loadError: unknown) => {
         if (active) {
@@ -89,9 +113,31 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
     };
   }, [request]);
 
+  const brands = useMemo(() => uniqueSorted(products.map((product) => product.nomMarque)), [products]);
+  const seasons = useMemo(() => uniqueSorted(products.map((product) => product.nomSaison)), [products]);
+  const teams = useMemo(() => uniqueSorted(products.map((product) => product.nomEquipe)), [products]);
+
+  const hasActiveFilters = search.trim() !== ''
+    || statusFilter !== 'TOUS'
+    || stockFilter !== 'TOUS'
+    || brandFilter !== 'TOUTES'
+    || seasonFilter !== 'TOUTES'
+    || teamFilter !== 'TOUS'
+    || priceSort !== 'default';
+
+  const resetFilters = useCallback(() => {
+    setSearch('');
+    setStatusFilter('TOUS');
+    setStockFilter('TOUS');
+    setBrandFilter('TOUTES');
+    setSeasonFilter('TOUTES');
+    setTeamFilter('TOUS');
+    setPriceSort('default');
+  }, []);
+
   const visibleProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('fr');
-    return products.filter((product) => {
+    const filtered = products.filter((product) => {
       const searchable = [product.titre, product.nomMarque, product.nomEquipe, product.nomSaison]
         .filter(Boolean)
         .join(' ')
@@ -100,14 +146,26 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
       const matchesStatus = statusFilter === 'TOUS' || product.statut === statusFilter;
       const matchesStock = stockFilter === 'TOUS'
         || (stockFilter === 'EN_STOCK' ? product.enStock : !product.enStock);
-      return matchesSearch && matchesStatus && matchesStock;
+      const matchesBrand = brandFilter === 'TOUTES' || product.nomMarque === brandFilter;
+      const matchesSeason = seasonFilter === 'TOUTES' || product.nomSaison === seasonFilter;
+      const matchesTeam = teamFilter === 'TOUS' || product.nomEquipe === teamFilter;
+      return matchesSearch && matchesStatus && matchesStock && matchesBrand && matchesSeason && matchesTeam;
     });
-  }, [products, search, statusFilter, stockFilter]);
+
+    if (priceSort === 'prix_asc') {
+      return [...filtered].sort((a, b) => a.prixTTC - b.prixTTC);
+    }
+    if (priceSort === 'prix_desc') {
+      return [...filtered].sort((a, b) => b.prixTTC - a.prixTTC);
+    }
+    return filtered;
+  }, [brandFilter, priceSort, products, search, seasonFilter, statusFilter, stockFilter, teamFilter]);
 
   async function selectProduct(id: number) {
     setDetailLoading(true);
     setError(null);
     setSuccess(null);
+    setPreviewFailed(false);
     try {
       const detail = await getProduct(request, id);
       setSelectedProduct(detail);
@@ -138,6 +196,10 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
       return;
     }
 
+    const initialPhotoUrl = (selectedProduct.photoUrl ?? '').trim();
+    const trimmedPhotoUrl = form.photoUrl.trim();
+    const shouldIncludePhotoUrl = trimmedPhotoUrl !== '' || initialPhotoUrl !== '';
+
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -147,6 +209,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
         description: form.description,
         estFlocable: form.estFlocable,
         impactEnvi: form.impactEnvi,
+        ...(shouldIncludePhotoUrl ? { photoUrl: trimmedPhotoUrl } : {}),
         ...(weight === undefined ? {} : { poids: weight }),
         prixDeBase: price,
         statut: form.statut,
@@ -154,6 +217,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
       });
       setSelectedProduct(updated);
       setForm(formFromProduct(updated));
+      setPreviewFailed(false);
       await loadProducts();
       setSuccess('Produit enregistré avec succès.');
     } catch (saveError) {
@@ -162,6 +226,9 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
       setSaving(false);
     }
   }
+
+  const previewUrl = form?.photoUrl.trim() ?? '';
+  const showPreviewImage = Boolean(previewUrl) && !previewFailed;
 
   return (
     <section className="catalogue-page" aria-labelledby="catalogue-title">
@@ -187,7 +254,7 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
       <div className="catalogue-layout">
         <div className="catalogue-list-panel">
           <div className="catalogue-filters">
-            <label>
+            <label className="catalogue-search-field">
               <span>Rechercher</span>
               <input
                 type="search"
@@ -195,6 +262,33 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
+            </label>
+            <label>
+              <span>Marque</span>
+              <select value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)}>
+                <option value="TOUTES">Toutes les marques</option>
+                {brands.map((brand) => (
+                  <option key={brand} value={brand}>{brand}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Saison</span>
+              <select value={seasonFilter} onChange={(event) => setSeasonFilter(event.target.value)}>
+                <option value="TOUTES">Toutes les saisons</option>
+                {seasons.map((season) => (
+                  <option key={season} value={season}>{season}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Club / Équipe</span>
+              <select value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)}>
+                <option value="TOUS">Tous les clubs</option>
+                {teams.map((team) => (
+                  <option key={team} value={team}>{team}</option>
+                ))}
+              </select>
             </label>
             <label>
               <span>Statut</span>
@@ -212,6 +306,21 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
                 <option value="RUPTURE">Rupture</option>
               </select>
             </label>
+            <label>
+              <span>Tri par prix</span>
+              <select value={priceSort} onChange={(event) => setPriceSort(event.target.value as PriceSort)}>
+                <option value="default">Tri par défaut</option>
+                <option value="prix_asc">Prix croissant</option>
+                <option value="prix_desc">Prix décroissant</option>
+              </select>
+            </label>
+            {hasActiveFilters && (
+              <div className="filter-reset-cell">
+                <button className="secondary-action filter-reset-button" type="button" onClick={resetFilters}>
+                  Réinitialiser
+                </button>
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -231,19 +340,45 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleProducts.map((product) => (
-                    <tr
-                      className={selectedProduct?.id === product.id ? 'selected' : undefined}
-                      key={product.id}
-                      onClick={() => void selectProduct(product.id)}
-                    >
-                      <td><strong>{product.titre}</strong><small>{product.nomEquipe ?? 'Sans équipe'} · {product.nomSaison ?? 'Sans saison'}</small></td>
-                      <td>{product.nomMarque ?? '—'}</td>
-                      <td>{formatPrice(product.prixTTC)}</td>
-                      <td><span className={`status-badge ${product.statut.toLowerCase()}`}>{product.statut}</span></td>
-                      <td>{product.enStock ? 'Disponible' : 'Rupture'}</td>
-                    </tr>
-                  ))}
+                  {visibleProducts.map((product) => {
+                    const hasThumb = Boolean(product.photoUrl?.trim()) && !failedImages[product.id];
+                    return (
+                      <tr
+                        className={selectedProduct?.id === product.id ? 'selected' : undefined}
+                        key={product.id}
+                        onClick={() => void selectProduct(product.id)}
+                      >
+                        <td>
+                          <div className="product-cell">
+                            <span className="product-thumb">
+                              {hasThumb ? (
+                                <img
+                                  src={product.photoUrl!}
+                                  alt={product.titre}
+                                  className="product-thumb-img"
+                                  onError={() =>
+                                    setFailedImages((current) => ({ ...current, [product.id]: true }))
+                                  }
+                                />
+                              ) : (
+                                <span className="product-thumb-fallback" aria-hidden="true">
+                                  {(product.nomEquipe ?? product.nomMarque ?? 'OK').slice(0, 3).toUpperCase()}
+                                </span>
+                              )}
+                            </span>
+                            <div>
+                              <strong>{product.titre}</strong>
+                              <small>{product.nomEquipe ?? 'Sans équipe'} · {product.nomSaison ?? 'Sans saison'}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td>{product.nomMarque ?? '—'}</td>
+                        <td>{formatPrice(product.prixTTC)}</td>
+                        <td><span className={`status-badge ${product.statut.toLowerCase()}`}>{product.statut}</span></td>
+                        <td>{product.enStock ? 'Disponible' : 'Rupture'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -266,6 +401,22 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
                 <button className="close-button" type="button" aria-label="Fermer la fiche" onClick={() => { setSelectedProduct(null); setForm(null); }}>×</button>
               </div>
 
+              <div className="product-preview">
+                {showPreviewImage ? (
+                  <img
+                    src={previewUrl}
+                    alt={selectedProduct.titre}
+                    className="product-preview-img"
+                    onError={() => setPreviewFailed(true)}
+                  />
+                ) : (
+                  <div className="product-preview-fallback">
+                    <strong>{(selectedProduct.equipe?.nom ?? selectedProduct.marque?.nomMarque ?? 'O’KIT').toUpperCase()}</strong>
+                    <span>Aucune image renseignée</span>
+                  </div>
+                )}
+              </div>
+
               <div className="readonly-relations">
                 <span><small>Marque</small>{selectedProduct.marque?.nomMarque ?? '—'}</span>
                 <span><small>Équipe</small>{selectedProduct.equipe?.nom ?? '—'}</span>
@@ -274,6 +425,17 @@ export default function CatalogueManager({ request }: CatalogueManagerProps) {
               </div>
 
               <label><span>Titre *</span><input required value={form.titre} onChange={(event) => setForm({ ...form, titre: event.target.value })} /></label>
+              <label>
+                <span>Image du maillot (URL ou data-URI)</span>
+                <input
+                  placeholder="https://… ou data:image/png;base64,…"
+                  value={form.photoUrl}
+                  onChange={(event) => {
+                    setPreviewFailed(false);
+                    setForm({ ...form, photoUrl: event.target.value });
+                  }}
+                />
+              </label>
               <label><span>Description</span><textarea rows={4} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
               <div className="form-row">
                 <label><span>Prix HT (€) *</span><input required min="0.01" step="0.01" type="number" value={form.prixDeBase} onChange={(event) => setForm({ ...form, prixDeBase: event.target.value })} /></label>

@@ -16,6 +16,7 @@ export type ProductSummary = {
   nomSaison: string | null;
   nomEquipe: string | null;
   statut: ProductStatus;
+  photoUrl?: string | null;
 };
 
 export type ProductDetail = {
@@ -37,6 +38,7 @@ export type ProductDetail = {
   tauxTva: number;
   promotionActive: unknown | null;
   variantes: ProductVariant[];
+  photoUrl?: string | null;
 };
 
 export type ProductUpdate = {
@@ -48,6 +50,7 @@ export type ProductUpdate = {
   impactEnvi: string;
   estFlocable: boolean;
   statut: ProductStatus;
+  photoUrl?: string | null;
 };
 
 type ProductPage = {

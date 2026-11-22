@@ -75,18 +75,37 @@ public class StockService {
     // ---------- Vendeur ----------
 
     /** Upsert idempotent : si la ligne existe déjà, elle est renvoyée telle quelle. */
+    /** Upsert idempotent : si la ligne existe déjà, elle est renvoyée telle quelle. */
     @Transactional
     public StockDto create(CreateStockRequest req) {
-        Optional<Stock> existing = stocks.findByIdVariante(req.variantId());
-        if (existing.isPresent()) return toDto(existing.get());
+        return stocks.findByIdVariante(req.variantId())
+                .map(this::toDto)
+                .orElseGet(() -> insert(req.variantId(), req.quantity(), req.threshold()));
+    }
 
+    /** Initialise les variantes manquantes ; les lignes existantes ne sont pas modifiées. */
+    @Transactional
+    public List<StockDto> createBulk(BulkCreateStockRequest req) {
+        Set<Long> ids = new TreeSet<>(req.variantIds());
+        Map<Long, Stock> existing = new HashMap<>();
+        stocks.findByIdVarianteIn(ids).forEach(s -> existing.put(s.getIdVariante(), s));
+
+        List<StockDto> result = new ArrayList<>();
+        for (Long id : ids) {
+            Stock s = existing.get(id);
+            result.add(s != null ? toDto(s) : insert(id, req.quantity(), req.threshold()));
+        }
+        return result;
+    }
+
+    private StockDto insert(Long variantId, int quantity, Integer threshold) {
         Stock s = new Stock();
-        s.setIdVariante(req.variantId());
-        s.setStockActuel(req.quantity());
-        if (req.threshold() != null) s.setSeuilStockAlerte(req.threshold());
-        s.setAlertActive(req.quantity() < s.getSeuilStockAlerte()); // pas de notification à la création
+        s.setIdVariante(variantId);
+        s.setStockActuel(quantity);
+        if (threshold != null) s.setSeuilStockAlerte(threshold);
+        s.setAlertActive(quantity < s.getSeuilStockAlerte());
         s = stocks.saveAndFlush(s);
-        if (req.quantity() > 0) recordMovement(s, req.quantity(), Reason.INITIAL, null);
+        if (quantity > 0) recordMovement(s, quantity, Reason.INITIAL, null);
         return toDto(s);
     }
 
@@ -95,6 +114,14 @@ public class StockService {
         Stock s = stocks.lockByIdVariante(variantId)
                 .orElseThrow(() -> new NotFoundException("Aucun stock pour la variante " + variantId));
         applyChange(s, quantity, Reason.RESTOCK, null);
+        return toDto(s);
+    }
+    @Transactional
+    public StockDto adjust(Long variantId, int targetQuantity) {
+        Stock s = stocks.lockByIdVariante(variantId)
+                .orElseThrow(() -> new NotFoundException("Aucun stock pour la variante " + variantId));
+        int delta = targetQuantity - s.getStockActuel();
+        if (delta != 0) applyChange(s, delta, Reason.SELLER_ADJUSTMENT, null);
         return toDto(s);
     }
 
@@ -248,4 +275,15 @@ public class StockService {
         try { return mapper.writeValueAsString(o); }
         catch (JsonProcessingException e) { throw new IllegalStateException(e); }
     }
+
+    @Transactional(readOnly = true)
+    public Page<MovementDto> movements(Long variantId, Pageable pageable) {
+        if (stocks.findByIdVariante(variantId).isEmpty()) {
+            throw new NotFoundException("Aucun stock pour la variante " + variantId);
+        }
+        return movements.findByIdVarianteOrderByIdDesc(variantId, pageable)
+                .map(m -> new MovementDto(m.getId(), m.getIdVariante(), m.getQuantityChange(),
+                        m.getStockAfter(), m.getReason().name(), m.getReferenceId(), m.getCreatedAt()));
+    }
+
 }

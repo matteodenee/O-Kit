@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   type CatalogueRequest,
+  getProduct,
   listAllProducts,
   updateProduct,
   updateProductStock,
@@ -24,6 +25,7 @@ test('loads every catalogue page including inactive products', async () => {
         nomSaison: null,
         nomEquipe: null,
         statut: page === 0 ? 'ACTIF' : 'DESACTIVE',
+        photoUrl: page === 0 ? 'data:image/svg+xml;utf8,<svg></svg>' : null,
       }],
       page,
       size: 1,
@@ -40,6 +42,8 @@ test('loads every catalogue page including inactive products', async () => {
     '/api/v1/products?page=1&size=100',
   ]);
   assert.deepEqual(products.map((product) => product.statut), ['ACTIF', 'DESACTIVE']);
+  assert.equal(products[0]?.photoUrl, 'data:image/svg+xml;utf8,<svg></svg>');
+  assert.equal(products[1]?.photoUrl, null);
 });
 
 test('sends only the supported product update fields with PATCH', async () => {
@@ -74,6 +78,40 @@ test('sends only the supported product update fields with PATCH', async () => {
     estFlocable: true,
     statut: 'DESACTIVE',
   });
+});
+
+test('forwards optional photoUrl in PATCH when provided and retrieves photoUrl in detail', async () => {
+  let receivedBody = '';
+  const request: CatalogueRequest = async (path, init) => {
+    if (init?.method === 'PATCH') {
+      receivedBody = String(init.body ?? '');
+      return Response.json({ id: 7, titre: 'Maillot PSG', photoUrl: 'https://cdn.okit.fr/psg.svg' });
+    }
+    return Response.json({
+      id: 7,
+      titre: 'Maillot PSG',
+      photoUrl: 'https://cdn.okit.fr/psg.svg',
+      variantes: [{ id: 1, taille: 'M' }],
+    });
+  };
+
+  const detail = await getProduct(request, 7);
+  assert.equal(detail.photoUrl, 'https://cdn.okit.fr/psg.svg');
+  assert.equal(detail.variantes.length, 1);
+
+  const updated = await updateProduct(request, 7, {
+    titre: 'Maillot PSG',
+    description: 'Description',
+    prixDeBase: 83.33,
+    couleursPrincipales: 'Bleu',
+    impactEnvi: 'Démo',
+    estFlocable: true,
+    statut: 'ACTIF',
+    photoUrl: 'https://cdn.okit.fr/psg.svg',
+  });
+
+  assert.equal(updated.photoUrl, 'https://cdn.okit.fr/psg.svg');
+  assert.equal((JSON.parse(receivedBody) as { photoUrl?: string }).photoUrl, 'https://cdn.okit.fr/psg.svg');
 });
 
 test('updates the global stock status through its dedicated endpoint', async () => {

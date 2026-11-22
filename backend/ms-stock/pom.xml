@@ -122,6 +122,10 @@
             <artifactId>rabbitmq</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
         <!-- Awaitility est déjà fourni par spring-boot-starter-test -->
     </dependencies>
 

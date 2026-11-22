@@ -20,6 +20,7 @@ import com.okit.catalogue.repositories.MarqueRepository;
 import com.okit.catalogue.repositories.ProduitRepository;
 import com.okit.catalogue.repositories.SaisonRepository;
 import com.okit.catalogue.repositories.TauxTvaRepository;
+import com.okit.catalogue.repositories.VarianteRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -27,6 +28,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,6 +42,7 @@ public class ProduitServiceImpl implements ProduitService {
     private final MarqueRepository marqueRepository;
     private final TauxTvaRepository tauxTvaRepository;
     private final EquipeRepository equipeRepository;
+    private final VarianteRepository varianteRepository;
     private final ProduitMapper produitMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -46,6 +52,7 @@ public class ProduitServiceImpl implements ProduitService {
             MarqueRepository marqueRepository,
             TauxTvaRepository tauxTvaRepository,
             EquipeRepository equipeRepository,
+            VarianteRepository varianteRepository,
             ProduitMapper produitMapper,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -54,6 +61,7 @@ public class ProduitServiceImpl implements ProduitService {
         this.marqueRepository = marqueRepository;
         this.tauxTvaRepository = tauxTvaRepository;
         this.equipeRepository = equipeRepository;
+        this.varianteRepository = varianteRepository;
         this.produitMapper = produitMapper;
         this.eventPublisher = eventPublisher;
     }
@@ -67,8 +75,27 @@ public class ProduitServiceImpl implements ProduitService {
             Pageable pageable
     ) {
         Page<Produit> page = produitRepository.findByFilters(equipeId, saisonId, marqueId, statut, pageable);
-        Page<ProduitSummaryDto> summaryPage = page.map(produitMapper::toSummaryDto);
+        Map<Long, List<Long>> varianteIdsParProduit = chargerVarianteIds(page.getContent());
+        Page<ProduitSummaryDto> summaryPage = page.map(produit -> produitMapper.toSummaryDto(
+                produit,
+                varianteIdsParProduit.getOrDefault(produit.getIdProduit(), List.of())
+        ));
         return PageResponse.from(summaryPage);
+    }
+
+    private Map<Long, List<Long>> chargerVarianteIds(List<Produit> produits) {
+        List<Long> produitIds = produits.stream()
+                .map(Produit::getIdProduit)
+                .filter(Objects::nonNull)
+                .toList();
+        if (produitIds.isEmpty()) {
+            return Map.of();
+        }
+        return varianteRepository.findVarianteIdsByProduitIds(produitIds).stream()
+                .collect(Collectors.groupingBy(
+                        VarianteRepository.VarianteIdView::getProduitId,
+                        Collectors.mapping(VarianteRepository.VarianteIdView::getVarianteId, Collectors.toList())
+                ));
     }
 
     @Override

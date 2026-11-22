@@ -45,7 +45,7 @@ class ProduitMapperTest {
         produit.setTauxTva(new TauxTva(new BigDecimal("20.00")));
         produit.setEquipe(new Equipe("Real Madrid", "https://example.com/rm.png", EquipeType.CLUB));
 
-        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit);
+        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit, java.util.List.of(11L, 12L));
 
         assertThat(summary).isNotNull();
         assertThat(summary.id()).isEqualTo(1L);
@@ -57,6 +57,7 @@ class ProduitMapperTest {
         assertThat(summary.nomSaison()).isEqualTo("2024/2025");
         assertThat(summary.nomEquipe()).isEqualTo("Real Madrid");
         assertThat(summary.statut()).isEqualTo(ProduitStatut.ACTIF);
+        assertThat(summary.varianteIds()).containsExactly(11L, 12L);
     }
 
     @Test

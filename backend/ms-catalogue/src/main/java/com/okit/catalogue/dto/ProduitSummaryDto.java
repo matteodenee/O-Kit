@@ -3,6 +3,7 @@ package com.okit.catalogue.dto;
 import com.okit.catalogue.entities.ProduitStatut;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record ProduitSummaryDto(
         Long id,
@@ -13,6 +14,7 @@ public record ProduitSummaryDto(
         String nomMarque,
         String nomSaison,
         String nomEquipe,
-        ProduitStatut statut
+        ProduitStatut statut,
+        List<Long> varianteIds
 ) {
 }

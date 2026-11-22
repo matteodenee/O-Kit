@@ -71,7 +71,8 @@ class ProduitControllerTest {
                 "Nike",
                 "2024/2025",
                 "PSG",
-                ProduitStatut.ACTIF
+                ProduitStatut.ACTIF,
+                List.of()
         );
 
         detailDto = new ProduitDetailDto(

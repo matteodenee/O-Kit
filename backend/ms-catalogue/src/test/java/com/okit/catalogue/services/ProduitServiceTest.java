@@ -24,6 +24,7 @@ import com.okit.catalogue.repositories.MarqueRepository;
 import com.okit.catalogue.repositories.ProduitRepository;
 import com.okit.catalogue.repositories.SaisonRepository;
 import com.okit.catalogue.repositories.TauxTvaRepository;
+import com.okit.catalogue.repositories.VarianteRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,9 @@ class ProduitServiceTest {
     private EquipeRepository equipeRepository;
 
     @Mock
+    private VarianteRepository varianteRepository;
+
+    @Mock
     private ProduitMapper produitMapper;
 
     @Mock
@@ -114,7 +118,8 @@ class ProduitServiceTest {
                 "Nike",
                 "2024/2025",
                 "PSG",
-                ProduitStatut.ACTIF
+                ProduitStatut.ACTIF,
+                List.of()
         );
 
         detailDto = new ProduitDetailDto(
@@ -147,7 +152,7 @@ class ProduitServiceTest {
 
         when(produitRepository.findByFilters(1L, 1L, 1L, ProduitStatut.ACTIF, pageable))
                 .thenReturn(produitPage);
-        when(produitMapper.toSummaryDto(produit)).thenReturn(summaryDto);
+        when(produitMapper.toSummaryDto(produit, List.of())).thenReturn(summaryDto);
 
         PageResponse<ProduitSummaryDto> response = produitService.getProducts(1L, 1L, 1L, ProduitStatut.ACTIF, pageable);
 

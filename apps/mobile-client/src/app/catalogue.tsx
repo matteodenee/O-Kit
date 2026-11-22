@@ -11,6 +11,11 @@ import {
 
 import { getActiveProducts, ProductSummary } from '../api/catalogue';
 import {
+  aggregateProductStockLevel,
+  getStockStatusMap,
+  ProductStockLevel,
+} from '../api/stock';
+import {
   addWishlistProduct,
   listWishlist,
   removeWishlistProduct,
@@ -23,6 +28,7 @@ type CatalogueState = 'loading' | 'ready' | 'error';
 export default function CatalogueScreen() {
   const { accessToken, authenticatedFetch, isReady, logout } = useAuth();
   const [products, setProducts] = useState<ProductSummary[]>([]);
+  const [stockLevels, setStockLevels] = useState<Record<number, ProductStockLevel>>({});
   const [state, setState] = useState<CatalogueState>('loading');
   const [message, setMessage] = useState<string | null>(null);
   const [favoriteProductIds, setFavoriteProductIds] = useState<Set<number>>(new Set());
@@ -40,16 +46,51 @@ export default function CatalogueScreen() {
     }
   }, [authenticatedFetch]);
 
+  // Le stock réel vit dans ms-stock : on agrège les statuts de toutes les tailles
+  // en un seul appel. En cas d'indisponibilité, on retombe sur le drapeau Catalogue.
+  const loadStockLevels = useCallback(
+    async (page: ProductSummary[]) => {
+      const varianteIds = page.flatMap((product) => product.varianteIds ?? []);
+      if (varianteIds.length === 0) {
+        return {};
+      }
+      try {
+        const statuses = await getStockStatusMap(authenticatedFetch, varianteIds);
+        const levels: Record<number, ProductStockLevel> = {};
+        for (const product of page) {
+          const ids = product.varianteIds ?? [];
+          levels[product.id] =
+            ids.length === 0
+              ? product.enStock
+                ? 'IN_STOCK'
+                : 'OUT_OF_STOCK'
+              : aggregateProductStockLevel(ids, statuses);
+        }
+        return levels;
+      } catch {
+        return {};
+      }
+    },
+    [authenticatedFetch]
+  );
+
+  const fetchCatalogue = useCallback(async () => {
+    const [page, wishlist] = await Promise.all([
+      getActiveProducts(authenticatedFetch),
+      loadFavoriteProductIds(),
+    ]);
+    const levels = await loadStockLevels(page.content);
+    return { page, wishlist, levels };
+  }, [authenticatedFetch, loadFavoriteProductIds, loadStockLevels]);
+
   const loadProducts = useCallback(async () => {
     setState('loading');
     setMessage(null);
     try {
-      const [page, wishlist] = await Promise.all([
-        getActiveProducts(authenticatedFetch),
-        loadFavoriteProductIds(),
-      ]);
+      const { page, wishlist, levels } = await fetchCatalogue();
       setProducts(page.content);
       setFavoriteProductIds(wishlist);
+      setStockLevels(levels);
       setState('ready');
     } catch (catalogueError: unknown) {
       setState('error');
@@ -59,7 +100,7 @@ export default function CatalogueScreen() {
           : 'Le catalogue est temporairement indisponible.'
       );
     }
-  }, [authenticatedFetch, loadFavoriteProductIds]);
+  }, [fetchCatalogue]);
 
   const toggleFavorite = useCallback(
     async (productId: number) => {
@@ -105,31 +146,33 @@ export default function CatalogueScreen() {
   );
 
   useEffect(() => {
+    if (!isReady || !accessToken) {
+      return;
+    }
     let active = true;
 
-    if (isReady && accessToken) {
-      Promise.all([getActiveProducts(authenticatedFetch), loadFavoriteProductIds()])
-        .then(([page, wishlist]) => {
-          if (!active) return;
-          setProducts(page.content);
-          setFavoriteProductIds(wishlist);
-          setState('ready');
-        })
-        .catch((catalogueError: unknown) => {
-          if (!active) return;
-          setState('error');
-          setMessage(
-            catalogueError instanceof Error
-              ? catalogueError.message
-              : 'Le catalogue est temporairement indisponible.'
-          );
-        });
-    }
+    fetchCatalogue()
+      .then(({ page, wishlist, levels }) => {
+        if (!active) return;
+        setProducts(page.content);
+        setFavoriteProductIds(wishlist);
+        setStockLevels(levels);
+        setState('ready');
+      })
+      .catch((catalogueError: unknown) => {
+        if (!active) return;
+        setState('error');
+        setMessage(
+          catalogueError instanceof Error
+            ? catalogueError.message
+            : 'Le catalogue est temporairement indisponible.'
+        );
+      });
 
     return () => {
       active = false;
     };
-  }, [accessToken, authenticatedFetch, isReady, loadFavoriteProductIds]);
+  }, [accessToken, fetchCatalogue, isReady]);
 
   if (!isReady) {
     return (
@@ -210,7 +253,10 @@ export default function CatalogueScreen() {
 
       {state === 'ready' && products.length > 0 ? (
         <View style={styles.grid}>
-          {products.map((product) => (
+          {products.map((product) => {
+            const stockLevel =
+              stockLevels[product.id] ?? (product.enStock ? 'IN_STOCK' : 'OUT_OF_STOCK');
+            return (
             <View key={product.id} style={styles.card}>
               <View style={styles.cardHeading}>
                 <Text style={styles.cardBrand}>{product.nomMarque ?? 'O’kit'}</Text>
@@ -256,18 +302,33 @@ export default function CatalogueScreen() {
                   </Text>
                   <View style={styles.cardFooter}>
                     <Text style={styles.price}>{Number(product.prixTTC).toFixed(2)} €</Text>
-                    <Text style={product.enStock ? styles.inStock : styles.outOfStock}>
-                      {product.enStock ? 'En stock' : 'Indisponible'}
+                    <Text
+                      style={
+                        stockLevel === 'OUT_OF_STOCK'
+                          ? styles.outOfStock
+                          : stockLevel === 'LOW_STOCK'
+                            ? styles.lowStock
+                            : styles.inStock
+                      }
+                    >
+                      {stockLabel(stockLevel)}
                     </Text>
                   </View>
                 </Pressable>
               </Link>
             </View>
-          ))}
+            );
+          })}
         </View>
       ) : null}
     </ScrollView>
   );
+}
+
+function stockLabel(level: ProductStockLevel) {
+  if (level === 'OUT_OF_STOCK') return 'Indisponible';
+  if (level === 'LOW_STOCK') return 'Derniers exemplaires';
+  return 'En stock';
 }
 
 const styles = StyleSheet.create({
@@ -305,5 +366,6 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   price: { color: '#1f2925', fontSize: 20, fontWeight: '800' },
   inStock: { color: '#337357', fontWeight: '700' },
+  lowStock: { color: '#c95f2b', fontWeight: '700' },
   outOfStock: { color: '#9f3e27', fontWeight: '700' },
 });

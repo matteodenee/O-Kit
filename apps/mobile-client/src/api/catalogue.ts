@@ -13,6 +13,8 @@ export type ProductSummary = {
   nomSaison: string | null;
   nomEquipe: string | null;
   statut: 'ACTIF' | 'DESACTIVE';
+  /** Identifiants des tailles, utilisés pour interroger le stock réel. */
+  varianteIds?: number[];
 };
 
 export type ProductPage = {

@@ -11,6 +11,11 @@ import {
 
 import { getProductById, ProductDetail } from '../api/catalogue';
 import {
+  aggregateProductStockLevel,
+  getStockStatusMap,
+  ProductStockLevel,
+} from '../api/stock';
+import {
   listWishlist,
   removeWishlistProduct,
   WishlistItem,
@@ -27,22 +32,57 @@ type WishlistState = 'loading' | 'ready' | 'error';
 export default function WishlistScreen() {
   const { accessToken, authenticatedFetch, isReady } = useAuth();
   const [products, setProducts] = useState<WishlistProduct[]>([]);
+  const [stockLevels, setStockLevels] = useState<Record<number, ProductStockLevel>>({});
   const [state, setState] = useState<WishlistState>('loading');
   const [message, setMessage] = useState<string | null>(null);
   const [pendingProductIds, setPendingProductIds] = useState<Set<number>>(new Set());
+
+  // Même logique que le Catalogue : on agrège le stock réel de ms-stock par produit.
+  const loadStockLevels = useCallback(
+    async (enriched: WishlistProduct[]) => {
+      const varianteIds = enriched.flatMap(
+        ({ product }) => product?.variantes.map((variante) => variante.id) ?? []
+      );
+      if (varianteIds.length === 0) {
+        return {};
+      }
+      try {
+        const statuses = await getStockStatusMap(authenticatedFetch, varianteIds);
+        const levels: Record<number, ProductStockLevel> = {};
+        for (const { product } of enriched) {
+          if (!product) continue;
+          levels[product.id] = aggregateProductStockLevel(
+            product.variantes.map((variante) => variante.id),
+            statuses
+          );
+        }
+        return levels;
+      } catch {
+        return {};
+      }
+    },
+    [authenticatedFetch]
+  );
+
+  const fetchWishlist = useCallback(async () => {
+    const items = await listWishlist(authenticatedFetch);
+    const enrichedProducts = await Promise.all(
+      items.map(async (item) => ({
+        item,
+        product: await getProductById(authenticatedFetch, item.productId),
+      }))
+    );
+    const levels = await loadStockLevels(enrichedProducts);
+    return { enrichedProducts, levels };
+  }, [authenticatedFetch, loadStockLevels]);
 
   const loadWishlist = useCallback(async () => {
     setState('loading');
     setMessage(null);
     try {
-      const items = await listWishlist(authenticatedFetch);
-      const enrichedProducts = await Promise.all(
-        items.map(async (item) => ({
-          item,
-          product: await getProductById(authenticatedFetch, item.productId),
-        }))
-      );
+      const { enrichedProducts, levels } = await fetchWishlist();
       setProducts(enrichedProducts);
+      setStockLevels(levels);
       setState('ready');
     } catch (wishlistError: unknown) {
       setState('error');
@@ -52,41 +92,35 @@ export default function WishlistScreen() {
           : 'Tes favoris sont temporairement indisponibles.'
       );
     }
-  }, [authenticatedFetch]);
+  }, [fetchWishlist]);
 
   useEffect(() => {
+    if (!isReady || !accessToken) {
+      return;
+    }
     let active = true;
 
-    if (isReady && accessToken) {
-      listWishlist(authenticatedFetch)
-        .then((items) =>
-          Promise.all(
-            items.map(async (item) => ({
-              item,
-              product: await getProductById(authenticatedFetch, item.productId),
-            }))
-          )
-        )
-        .then((enrichedProducts) => {
-          if (!active) return;
-          setProducts(enrichedProducts);
-          setState('ready');
-        })
-        .catch((wishlistError: unknown) => {
-          if (!active) return;
-          setState('error');
-          setMessage(
-            wishlistError instanceof Error
-              ? wishlistError.message
-              : 'Tes favoris sont temporairement indisponibles.'
-          );
-        });
-    }
+    fetchWishlist()
+      .then(({ enrichedProducts, levels }) => {
+        if (!active) return;
+        setProducts(enrichedProducts);
+        setStockLevels(levels);
+        setState('ready');
+      })
+      .catch((wishlistError: unknown) => {
+        if (!active) return;
+        setState('error');
+        setMessage(
+          wishlistError instanceof Error
+            ? wishlistError.message
+            : 'Tes favoris sont temporairement indisponibles.'
+        );
+      });
 
     return () => {
       active = false;
     };
-  }, [accessToken, authenticatedFetch, isReady]);
+  }, [accessToken, fetchWishlist, isReady]);
 
   if (!isReady) {
     return (
@@ -193,6 +227,9 @@ export default function WishlistScreen() {
           <View style={styles.grid}>
             {products.map(({ item, product }) => {
               const unavailable = !product || product.statut === 'DESACTIVE';
+              const stockLevel = product
+                ? stockLevels[product.id] ?? (product.enStock ? 'IN_STOCK' : 'OUT_OF_STOCK')
+                : 'OUT_OF_STOCK';
               return (
                 <View key={item.productId} style={styles.card}>
                   <View style={styles.cardHeading}>
@@ -204,12 +241,22 @@ export default function WishlistScreen() {
                         {product?.titre ?? `Produit #${item.productId}`}
                       </Text>
                     </View>
-                    <Text style={unavailable ? styles.unavailable : styles.available}>
+                    <Text
+                      style={
+                        unavailable || stockLevel === 'OUT_OF_STOCK'
+                          ? styles.unavailable
+                          : stockLevel === 'LOW_STOCK'
+                            ? styles.lowStock
+                            : styles.available
+                      }
+                    >
                       {unavailable
                         ? 'Indisponible'
-                        : product.enStock
-                          ? 'En stock'
-                          : 'Rupture de stock'}
+                        : stockLevel === 'OUT_OF_STOCK'
+                          ? 'Rupture de stock'
+                          : stockLevel === 'LOW_STOCK'
+                            ? 'Derniers exemplaires'
+                            : 'En stock'}
                     </Text>
                   </View>
 
@@ -295,6 +342,7 @@ const styles = StyleSheet.create({
   cardMeta: { color: '#716a61', lineHeight: 20 },
   price: { color: '#1f2925', fontSize: 20, fontWeight: '800' },
   available: { color: '#337357', fontWeight: '700' },
+  lowStock: { color: '#c95f2b', fontWeight: '700' },
   unavailable: { color: '#9f3e27', fontWeight: '700' },
   cardFooter: { alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginTop: 8 },
   addedAt: { color: '#81786e', fontSize: 12 },

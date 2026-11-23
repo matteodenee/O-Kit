@@ -2,10 +2,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ms-stock
-  namespace: polytech-dams5-07
   labels:
     app.kubernetes.io/name: ms-stock
     app.kubernetes.io/instance: okit
+    app.kubernetes.io/part-of: okit
     app.kubernetes.io/component: backend
 spec:
   type: ClusterIP
@@ -15,5 +15,5 @@ spec:
   ports:
     - name: http
       port: 8083
-      targetPort: 8083
+      targetPort: http
       protocol: TCP

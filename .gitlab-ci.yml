@@ -1,9 +1,9 @@
 stages:
   - validate
   - test
-  - build   # reserve pour etapes futures (Docker registry)
+  - build   # build et push des images Docker vers le registry GitLab
   - scan    # reserve pour trivy
-  - deploy  # reserve pour cluster Polytech
+  - deploy  # deploiement sur le cluster Polytech
 
 k8s-lint:
   stage: validate
@@ -14,6 +14,7 @@ k8s-lint:
     - kubectl kustomize k8s/services/ms-catalogue/
     - kubectl kustomize k8s/services/ms-utilisateur/
     - kubectl kustomize k8s/services/ms-commande/
+    - kubectl kustomize k8s/services/ms-stock/
     - kubectl kustomize infra/kubernetes/gateway/
     - kubectl kustomize infra/keycloak/
     - kubectl kustomize infra/kubernetes/overlays/user-staging/
@@ -114,4 +115,99 @@ test:ms-utilisateur:
     - if: '$CI_COMMIT_BRANCH'
       changes:
         - backend/ms-utilisateur/**/*
+        - .gitlab-ci.yml
+
+test:ms-stock:
+  stage: test
+  image: maven:3.9.11-eclipse-temurin-21-alpine
+  services:
+    - name: docker:27.3.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - cd backend/ms-stock
+    - mvn --batch-mode --no-transfer-progress clean verify
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - backend/ms-stock/target/surefire-reports/TEST-*.xml
+        - backend/ms-stock/target/failsafe-reports/TEST-*.xml
+    paths:
+      - backend/ms-stock/target/surefire-reports/
+      - backend/ms-stock/target/failsafe-reports/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/ms-stock/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - backend/ms-stock/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - backend/ms-stock/**/*
+        - .gitlab-ci.yml
+
+build:ms-stock:
+  stage: build
+  image: docker:27.3.1
+  services:
+    - name: docker:27.3.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    IMAGE: $CI_REGISTRY_IMAGE/ms-stock
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build --pull -t "$IMAGE:$CI_COMMIT_SHORT_SHA" backend/ms-stock
+    - docker push "$IMAGE:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - backend/ms-stock/**/*
+        - k8s/services/ms-stock/**/*
+        - .gitlab-ci.yml
+
+deploy:ms-stock:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  needs:
+    - build:ms-stock
+  script:
+    - mkdir -p ~/.kube
+    - |
+      if [ -n "$KUBECONFIG" ] && [ -f "$KUBECONFIG" ]; then
+        cp "$KUBECONFIG" ~/.kube/config
+      elif [ -n "$KUBE_CONFIG" ]; then
+        echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+      else
+        echo "Erreur: variable KUBECONFIG (fichier) ou KUBE_CONFIG (base64) requise"
+        exit 1
+      fi
+    - chmod 600 ~/.kube/config
+    - kubectl config set-context --current --namespace=polytech-dams5-07
+    # Le tag n'est injecté que dans le workspace du job, jamais commité
+    - 'sed -i "s|newTag: replace-me|newTag: $CI_COMMIT_SHORT_SHA|" k8s/services/ms-stock/kustomization.yaml'
+    - kubectl kustomize k8s/services/ms-stock/ > /tmp/ms-stock.yaml
+    - kubectl apply --dry-run=server -f /tmp/ms-stock.yaml
+    - kubectl apply -f /tmp/ms-stock.yaml
+    - kubectl rollout status deploy/ms-stock --timeout=5m
+  environment:
+    name: polytech-dams5-07
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - backend/ms-stock/**/*
+        - k8s/services/ms-stock/**/*
         - .gitlab-ci.yml

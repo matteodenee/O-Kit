@@ -1,11 +1,11 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: ms-stock-monitor
-  namespace: polytech-dams5-07
+  name: ms-stock
   labels:
     app.kubernetes.io/name: ms-stock
     app.kubernetes.io/instance: okit
+    app.kubernetes.io/part-of: okit
     app.kubernetes.io/component: backend
 spec:
   selector:

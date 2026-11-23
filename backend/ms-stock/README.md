@@ -58,8 +58,11 @@ Le backend renvoie un statut, la couleur est décidée par le frontend.
 
 - `GET /api/v1/seller/stocks` : lignes de stock existantes (paginé)
 - `POST /api/v1/seller/stocks` : `{ "variantId", "quantity", "threshold"? }`. Crée la ligne, idempotent (renvoie la ligne existante si elle existe déjà)
+- `POST /api/v1/seller/stocks/bulk` : `{ "variantIds": [..], "quantity", "threshold"? }` (100 ids max). Crée uniquement les lignes manquantes, ne modifie pas les existantes, idempotent
 - `POST /api/v1/seller/stocks/{variantId}/restock` : `{ "quantity" }` (> 0), mouvement `RESTOCK`. 404 si la ligne n'existe pas
+- `POST /api/v1/seller/stocks/{variantId}/adjust` : `{ "targetQuantity" }` (≥ 0). Fixe le stock réel, mouvement `SELLER_ADJUSTMENT` (delta calculé), alertes recalculées. 404 si la ligne n'existe pas
 - `PATCH /api/v1/seller/stocks/{variantId}/threshold` : `{ "threshold" }`
+- `GET /api/v1/seller/stocks/{variantId}/movements` : historique paginé (20 par page), du plus récent au plus ancien : `{ id, variantId, change, stockAfter, reason, reference, createdAt }`. 404 si la ligne n'existe pas
 - `GET /api/v1/seller/notifications?unread=true`
 - `GET /api/v1/seller/notifications/unread-count` : `{ "count" }`
 - `POST /api/v1/seller/notifications/{id}/read` : 204
@@ -121,4 +124,87 @@ Concurrence : verrou pessimiste (`SELECT ... FOR UPDATE`) pris dans l'ordre tri�
 ## Limites connues
 
 - Aucune purge automatique de `idempotent_requests`.
-- Pas d'endpoint de correction manuelle vers le bas ni d'historique des mouvements.
+- Pas de plafond sur `variantIds` (`GET /api/v1/stocks`) ni sur `qty` (`/check`).
+
+- `POST /api/v1/seller/stocks/{variantId}/adjust` : `{ "targetQuantity" }` (≥ 0). Fixe le stock réel, mouvement `SELLER_ADJUSTMENT` (delta calculé), alertes recalculées. 404 si la ligne n'existe pas
+
+> Dans `compose.yaml`, le service `stock-service` tourne sur le port **8083** (`SERVER_PORT=8083`). Les appels de service à service utilisent donc `http://stock-service:8083`.
+>
+## Lancement du projet
+
+Depuis la racine du dépôt (`O-Kit/`).
+
+### 1. Configuration
+
+```bash
+cp -n .env.example .env
+cp -n apps/seller-backoffice/.env.example apps/seller-backoffice/.env.local
+cp -n apps/mobile-client/.env.example apps/mobile-client/.env.local
+```
+
+Renseigner ensuite les mots de passe manquants dans `.env`.
+
+### 2. Backend (Docker)
+
+```bash
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+```
+
+### 3. Keycloak et données de démo
+
+```bash
+set -a; source .env; set +a
+./infra/keycloak/reconcile-local-realm.sh
+docker compose exec postgres /opt/okit/seed-catalogue-demo.sh
+```
+
+Variantes (tailles) des produits de démo, à lancer une seule fois :
+
+```bash
+docker compose exec postgres psql -U okit_catalogue -d okit_catalogue -c "
+INSERT INTO variante (id_produit, taille)
+SELECT p.id_produit, t.taille
+FROM produit p
+CROSS JOIN (VALUES ('XXS'),('XS'),('S'),('M'),('L'),('XL'),('XXL'),('XXXL')) AS t(taille)
+ON CONFLICT (id_produit, taille) DO NOTHING;"
+```
+
+### 4. Backoffice vendeur
+
+```bash
+cd apps/seller-backoffice
+npm ci
+npm run dev
+```
+
+Ouvrir http://localhost:5173 avec un compte ayant uniquement le rôle `SELLER`.
+
+### 5. Application mobile
+
+```bash
+cd apps/mobile-client
+npm ci
+npx expo start
+```
+
+### 6. Tests de ms-stock
+
+```bash
+cd backend/ms-stock
+mvn verify -Djacoco.skip=true
+```
+
+### 7. Reconstruire ms-stock après une modification
+
+```bash
+docker compose up -d --build stock-service
+docker compose logs stock-service --tail 15
+```
+
+### 8. Arrêt
+
+```bash
+docker compose down
+```

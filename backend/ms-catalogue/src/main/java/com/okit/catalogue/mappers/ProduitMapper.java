@@ -37,7 +37,7 @@ public class ProduitMapper {
         this.priceCalculator = priceCalculator;
     }
 
-    public ProduitSummaryDto toSummaryDto(Produit produit) {
+    public ProduitSummaryDto toSummaryDto(Produit produit, List<Long> varianteIds) {
         if (produit == null) {
             return null;
         }
@@ -63,7 +63,9 @@ public class ProduitMapper {
                 produit.getMarque() != null ? produit.getMarque().getNomMarque() : null,
                 produit.getSaison() != null ? produit.getSaison().getNom() : null,
                 produit.getEquipe() != null ? produit.getEquipe().getNom() : null,
-                produit.getStatut()
+                produit.getStatut(),
+                varianteIds != null ? varianteIds : List.of(),
+                produit.getPhotoUrl()
         );
     }
 
@@ -130,7 +132,8 @@ public class ProduitMapper {
                 equipeDto,
                 tauxTva,
                 promotionDto,
-                variantesDto
+                variantesDto,
+                produit.getPhotoUrl()
         );
     }
 
@@ -149,6 +152,7 @@ public class ProduitMapper {
         produit.setEstFlocable(dto.estFlocable() != null ? dto.estFlocable() : true);
         produit.setStatut(dto.statut() != null ? dto.statut() : ProduitStatut.ACTIF);
         produit.setEnStock(true);
+        produit.setPhotoUrl(dto.photoUrl());
         produit.setSaison(saison);
         produit.setMarque(marque);
         produit.setTauxTva(tva);

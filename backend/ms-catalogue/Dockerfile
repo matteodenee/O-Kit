@@ -14,7 +14,7 @@ RUN chmod +x mvnw
 COPY src/ src/
 
 # Build du JAR sans exécuter les tests (validés au préalable en CI)
-RUN ./mvnw clean package -Dmaven.test.skip=true
+RUN ./mvnw clean package -DskipTests
 
 # ==========================================
 # Étape 2 : Runtime (Image d'exécution allégée)

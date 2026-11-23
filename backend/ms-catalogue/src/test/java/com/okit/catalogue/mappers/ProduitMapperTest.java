@@ -3,6 +3,7 @@ package com.okit.catalogue.mappers;
 import com.okit.catalogue.dto.ProduitDetailDto;
 import com.okit.catalogue.dto.ProduitInputDto;
 import com.okit.catalogue.dto.ProduitSummaryDto;
+import com.okit.catalogue.dto.VarianteDto;
 import com.okit.catalogue.entities.Equipe;
 import com.okit.catalogue.entities.EquipeType;
 import com.okit.catalogue.entities.Marque;
@@ -10,7 +11,9 @@ import com.okit.catalogue.entities.Produit;
 import com.okit.catalogue.entities.ProduitStatut;
 import com.okit.catalogue.entities.Promotion;
 import com.okit.catalogue.entities.Saison;
+import com.okit.catalogue.entities.Taille;
 import com.okit.catalogue.entities.TauxTva;
+import com.okit.catalogue.entities.Variante;
 import com.okit.catalogue.services.pricing.PriceCalculator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,7 +49,7 @@ class ProduitMapperTest {
         produit.setTauxTva(new TauxTva(new BigDecimal("20.00")));
         produit.setEquipe(new Equipe("Real Madrid", "https://example.com/rm.png", EquipeType.CLUB));
 
-        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit);
+        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit, java.util.List.of(11L, 12L));
 
         assertThat(summary).isNotNull();
         assertThat(summary.id()).isEqualTo(1L);
@@ -57,6 +61,7 @@ class ProduitMapperTest {
         assertThat(summary.nomSaison()).isEqualTo("2024/2025");
         assertThat(summary.nomEquipe()).isEqualTo("Real Madrid");
         assertThat(summary.statut()).isEqualTo(ProduitStatut.ACTIF);
+        assertThat(summary.varianteIds()).containsExactly(11L, 12L);
     }
 
     @Test
@@ -140,5 +145,93 @@ class ProduitMapperTest {
         assertThat(produit.getMarque()).isEqualTo(marque);
         assertThat(produit.getTauxTva()).isEqualTo(tva);
         assertThat(produit.getEquipe()).isEqualTo(equipe);
+    }
+
+    @Test
+    @DisplayName("toSummaryDto et toDetailDto : mappent photoUrl et les 8 variantes triées de XXS à XXXL")
+    void shouldMapPhotoUrlAndEightSortedVariantes() {
+        Produit produit = new Produit();
+        produit.setIdProduit(7L);
+        produit.setTitre("Maillot PSG Domicile 2025/2026");
+        produit.setPrixDeBase(new BigDecimal("83.33"));
+        produit.setEnStock(true);
+        produit.setStatut(ProduitStatut.ACTIF);
+        produit.setPhotoUrl("data:image/svg+xml;utf8,<svg></svg>");
+        produit.setMarque(new Marque(1L, "Nike", null));
+        produit.setSaison(new Saison(1L, "2025/2026"));
+        produit.setTauxTva(new TauxTva(1L, new BigDecimal("20.00")));
+        produit.setEquipe(new Equipe(1L, "Paris Saint-Germain", null, EquipeType.CLUB));
+
+        // Ajout dans le désordre pour vérifier le tri par enum Taille
+        for (Taille taille : List.of(Taille.XXXL, Taille.M, Taille.XXS, Taille.XL, Taille.S, Taille.L, Taille.XXL, Taille.XS)) {
+            produit.addVariante(new Variante(produit, taille));
+        }
+
+        ProduitSummaryDto summary = produitMapper.toSummaryDto(produit, java.util.List.of());
+        ProduitDetailDto detail = produitMapper.toDetailDto(produit);
+
+        assertThat(summary.photoUrl()).isEqualTo("data:image/svg+xml;utf8,<svg></svg>");
+        assertThat(detail.photoUrl()).isEqualTo("data:image/svg+xml;utf8,<svg></svg>");
+        assertThat(detail.variantes())
+                .hasSize(8)
+                .extracting(VarianteDto::taille)
+                .containsExactly(Taille.XXS, Taille.XS, Taille.S, Taille.M, Taille.L, Taille.XL, Taille.XXL, Taille.XXXL);
+    }
+
+    @Test
+    @DisplayName("toEntity : mappe photoUrl et génère les 8 tailles par défaut ou les tailles sélectionnées dédoublonnées")
+    void shouldMapPhotoUrlAndVariantesInToEntity() {
+        Saison saison = new Saison(1L, "2025/2026");
+        Marque marque = new Marque(2L, "Nike", null);
+        TauxTva tva = new TauxTva(3L, new BigDecimal("20.00"));
+        Equipe equipe = new Equipe(4L, "PSG", null, EquipeType.CLUB);
+
+        ProduitInputDto defaultSizesDto = new ProduitInputDto(
+                "Maillot Complet",
+                "Description",
+                new BigDecimal("85.00"),
+                0.23,
+                "Bleu",
+                "A",
+                true,
+                ProduitStatut.ACTIF,
+                1L,
+                2L,
+                3L,
+                4L,
+                null,
+                "https://cdn.okit.fr/psg.png"
+        );
+
+        Produit defaultEntity = produitMapper.toEntity(defaultSizesDto, saison, marque, tva, equipe);
+        assertThat(defaultEntity.getPhotoUrl()).isEqualTo("https://cdn.okit.fr/psg.png");
+        assertThat(defaultEntity.getVariantes())
+                .hasSize(8)
+                .extracting(Variante::getTaille)
+                .containsExactly(Taille.values());
+
+        ProduitInputDto selectedSizesDto = new ProduitInputDto(
+                "Maillot Tailles Choisies",
+                "Description",
+                new BigDecimal("85.00"),
+                0.23,
+                "Bleu",
+                "A",
+                true,
+                ProduitStatut.ACTIF,
+                1L,
+                2L,
+                3L,
+                4L,
+                List.of(Taille.M, Taille.L, Taille.M),
+                "https://cdn.okit.fr/psg-select.png"
+        );
+
+        Produit selectedEntity = produitMapper.toEntity(selectedSizesDto, saison, marque, tva, equipe);
+        assertThat(selectedEntity.getPhotoUrl()).isEqualTo("https://cdn.okit.fr/psg-select.png");
+        assertThat(selectedEntity.getVariantes())
+                .hasSize(2)
+                .extracting(Variante::getTaille)
+                .containsExactly(Taille.M, Taille.L);
     }
 }

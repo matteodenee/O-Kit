@@ -233,6 +233,12 @@ components:
           nullable: true
         statut:
           $ref: '#/components/schemas/ProductStatus'
+        varianteIds:
+          type: array
+          description: Identifiants des variantes (tailles) du produit, pour interroger le stock réel.
+          items:
+            type: integer
+            format: int64
     ProductPage:
       type: object
       required: [content, page, size, totalElements, totalPages, isLast]

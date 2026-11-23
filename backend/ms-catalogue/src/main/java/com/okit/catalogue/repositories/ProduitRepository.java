@@ -65,6 +65,27 @@ public interface ProduitRepository extends JpaRepository<Produit, Long>, JpaSpec
            "WHERE (:equipeId IS NULL OR e.idEquipe = :equipeId) " +
            "AND (:saisonId IS NULL OR p.saison.idSaison = :saisonId) " +
            "AND (:marqueId IS NULL OR p.marque.idMarque = :marqueId) " +
+           "AND (:equipeNom IS NULL OR LOWER(e.nom) = LOWER(:equipeNom)) " +
+           "AND (:saisonNom IS NULL OR LOWER(p.saison.nom) = LOWER(:saisonNom)) " +
+           "AND (:marqueNom IS NULL OR LOWER(p.marque.nomMarque) = LOWER(:marqueNom)) " +
+           "AND (:statut IS NULL OR p.statut = :statut)")
+    Page<Produit> findByFilters(
+            @Param("equipeId") Long equipeId,
+            @Param("saisonId") Long saisonId,
+            @Param("marqueId") Long marqueId,
+            @Param("equipeNom") String equipeNom,
+            @Param("saisonNom") String saisonNom,
+            @Param("marqueNom") String marqueNom,
+            @Param("statut") ProduitStatut statut,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"saison", "marque", "tauxTva", "equipe"})
+    @Query("SELECT p FROM Produit p " +
+           "LEFT JOIN p.equipe e " +
+           "WHERE (:equipeId IS NULL OR e.idEquipe = :equipeId) " +
+           "AND (:saisonId IS NULL OR p.saison.idSaison = :saisonId) " +
+           "AND (:marqueId IS NULL OR p.marque.idMarque = :marqueId) " +
            "AND (:statut IS NULL OR p.statut = :statut) " +
            "AND (:enStock IS NULL OR p.enStock = :enStock)")
     Page<Produit> findByFilters(

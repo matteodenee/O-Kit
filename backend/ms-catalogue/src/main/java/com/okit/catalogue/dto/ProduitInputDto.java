@@ -1,14 +1,14 @@
 package com.okit.catalogue.dto;
 
 import com.okit.catalogue.entities.ProduitStatut;
+import com.okit.catalogue.entities.Taille;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import com.okit.catalogue.entities.Taille;
-import java.util.List;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record ProduitInputDto(
         @NotBlank(message = "Le titre du produit est obligatoire")
@@ -42,13 +42,44 @@ public record ProduitInputDto(
 
         Long idEquipe,
 
-        List<Taille> tailles
+        List<Taille> tailles,
+
+        String photoUrl
 ) {
-        public ProduitInputDto(String titre, String description, BigDecimal prixDeBase, Double poids,
-                               String couleursPrincipales, String impactEnvi, Boolean estFlocable,
-                               ProduitStatut statut, Long idSaison, Long idMarque, Long idTauxTVA,
-                               Long idEquipe) {
-                this(titre, description, prixDeBase, poids, couleursPrincipales, impactEnvi,
-                        estFlocable, statut, idSaison, idMarque, idTauxTVA, idEquipe, null);
-        }
+    public ProduitInputDto(
+            String titre,
+            String description,
+            BigDecimal prixDeBase,
+            Double poids,
+            String couleursPrincipales,
+            String impactEnvi,
+            Boolean estFlocable,
+            ProduitStatut statut,
+            Long idSaison,
+            Long idMarque,
+            Long idTauxTVA,
+            Long idEquipe
+    ) {
+        this(titre, description, prixDeBase, poids, couleursPrincipales, impactEnvi,
+                estFlocable, statut, idSaison, idMarque, idTauxTVA, idEquipe, null, null);
+    }
+
+    public ProduitInputDto(
+            String titre,
+            String description,
+            BigDecimal prixDeBase,
+            Double poids,
+            String couleursPrincipales,
+            String impactEnvi,
+            Boolean estFlocable,
+            ProduitStatut statut,
+            Long idSaison,
+            Long idMarque,
+            Long idTauxTVA,
+            Long idEquipe,
+            List<Taille> tailles
+    ) {
+        this(titre, description, prixDeBase, poids, couleursPrincipales, impactEnvi,
+                estFlocable, statut, idSaison, idMarque, idTauxTVA, idEquipe, tailles, null);
+    }
 }

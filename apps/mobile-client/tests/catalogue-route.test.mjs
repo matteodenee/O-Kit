@@ -38,4 +38,20 @@ test('the catalogue API uses the authenticated gateway product endpoint', async 
 
   assert.match(catalogueApi, /authenticatedFetch/u);
   assert.match(catalogueApi, /\/api\/v1\/products\?statut=ACTIF&size=20/u);
+  assert.match(catalogueApi, /photoUrl\?:\s*string\s*\|\s*null/u);
+});
+
+test('the catalogue screen renders jersey images, brand/season/club filters and price sorting', async () => {
+  const catalogueRoute = await readFile(join(projectDirectory, 'src/app/catalogue.tsx'), 'utf8');
+
+  assert.match(catalogueRoute, /<Image[\s\S]*product\.photoUrl/u);
+  assert.match(catalogueRoute, /filtersExpanded/u);
+  assert.match(catalogueRoute, /Afficher/u);
+  assert.match(catalogueRoute, /Masquer/u);
+  assert.match(catalogueRoute, /Marque/u);
+  assert.match(catalogueRoute, /Saison/u);
+  assert.match(catalogueRoute, /Club \/ Équipe/u);
+  assert.match(catalogueRoute, /Prix croissant/u);
+  assert.match(catalogueRoute, /Prix décroissant/u);
+  assert.match(catalogueRoute, /Réinitialiser les filtres/u);
 });

@@ -1,5 +1,6 @@
 package com.okit.catalogue.services;
 
+import com.okit.catalogue.dto.CatalogueFiltersDto;
 import com.okit.catalogue.dto.PageResponse;
 import com.okit.catalogue.dto.ProduitDetailDto;
 import com.okit.catalogue.dto.ProduitInputDto;
@@ -11,6 +12,19 @@ import org.springframework.data.domain.Pageable;
 public interface ProduitService {
 
     PageResponse<ProduitSummaryDto> getProducts(Long equipeId, Long saisonId, Long marqueId, ProduitStatut statut, Pageable pageable);
+
+    PageResponse<ProduitSummaryDto> getProducts(
+            Long equipeId,
+            Long saisonId,
+            Long marqueId,
+            String equipeNom,
+            String saisonNom,
+            String marqueNom,
+            ProduitStatut statut,
+            Pageable pageable
+    );
+
+    CatalogueFiltersDto getAvailableFilters();
 
     ProduitDetailDto getProductById(Long id);
 

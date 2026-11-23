@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/seller")
@@ -36,6 +37,11 @@ public class SellerStockController {
         return service.restock(variantId, req.quantity());
     }
 
+    @PostMapping("/stocks/{variantId}/adjust")
+    public StockDto adjust(@PathVariable Long variantId, @Valid @RequestBody AdjustStockRequest req) {
+        return service.adjust(variantId, req.targetQuantity());
+    }
+
     @PatchMapping("/stocks/{variantId}/threshold")
     public StockDto threshold(@PathVariable Long variantId, @Valid @RequestBody ThresholdRequest req) {
         return service.updateThreshold(variantId, req.threshold());
@@ -56,5 +62,15 @@ public class SellerStockController {
     public ResponseEntity<Void> markRead(@PathVariable Long id) {
         service.markRead(id);
         return ResponseEntity.noContent().build();
+    }
+    @PostMapping("/stocks/bulk")
+    public List<StockDto> createBulk(@Valid @RequestBody BulkCreateStockRequest req) {
+        return service.createBulk(req);
+    }
+
+    @GetMapping("/stocks/{variantId}/movements")
+    public Page<MovementDto> movements(@PathVariable Long variantId,
+                                       @PageableDefault(size = 20) Pageable pageable) {
+        return service.movements(variantId, pageable);
     }
 }

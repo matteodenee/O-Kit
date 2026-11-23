@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-stock
+  namespace: polytech-dams5-07
+  labels:
+    app.kubernetes.io/name: ms-stock
+    app.kubernetes.io/instance: okit
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ms-stock
+      app.kubernetes.io/instance: okit
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ms-stock
+        app.kubernetes.io/instance: okit
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: ms-stock
+          image: registry.gitlab.com/iwa-group2/o-kit/ms-stock:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8083
+              protocol: TCP
+          env:
+            - name: SERVER_PORT
+              value: "8083"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/okit_stock_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: stock-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stock-db-credentials
+                  key: password
+            - name: OIDC_ISSUER_URI
+              value: https://dams5-07.students.polytech.lange.xyz/realms/okit
+            - name: OIDC_JWK_SET_URI
+              value: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+            - name: SWAGGER_ENABLED
+              value: "false"
+            - name: JAVA_TOOL_OPTIONS
+              value: -XX:MaxRAMPercentage=70
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8083
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3

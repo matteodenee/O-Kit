@@ -1,10 +1,14 @@
 package com.okit.catalogue.services;
 
+import com.okit.catalogue.dto.CatalogueFiltersDto;
+import com.okit.catalogue.dto.EquipeDto;
+import com.okit.catalogue.dto.MarqueDto;
 import com.okit.catalogue.dto.PageResponse;
 import com.okit.catalogue.dto.ProduitDetailDto;
 import com.okit.catalogue.dto.ProduitInputDto;
 import com.okit.catalogue.dto.ProduitSummaryDto;
 import com.okit.catalogue.dto.ProduitUpdateInputDto;
+import com.okit.catalogue.dto.SaisonDto;
 import com.okit.catalogue.entities.Equipe;
 import com.okit.catalogue.entities.Marque;
 import com.okit.catalogue.entities.Produit;
@@ -20,6 +24,7 @@ import com.okit.catalogue.repositories.MarqueRepository;
 import com.okit.catalogue.repositories.ProduitRepository;
 import com.okit.catalogue.repositories.SaisonRepository;
 import com.okit.catalogue.repositories.TauxTvaRepository;
+import com.okit.catalogue.repositories.VarianteRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -27,6 +32,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,6 +47,7 @@ public class ProduitServiceImpl implements ProduitService {
     private final MarqueRepository marqueRepository;
     private final TauxTvaRepository tauxTvaRepository;
     private final EquipeRepository equipeRepository;
+    private final VarianteRepository varianteRepository;
     private final ProduitMapper produitMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -46,6 +57,7 @@ public class ProduitServiceImpl implements ProduitService {
             MarqueRepository marqueRepository,
             TauxTvaRepository tauxTvaRepository,
             EquipeRepository equipeRepository,
+            VarianteRepository varianteRepository,
             ProduitMapper produitMapper,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -54,6 +66,7 @@ public class ProduitServiceImpl implements ProduitService {
         this.marqueRepository = marqueRepository;
         this.tauxTvaRepository = tauxTvaRepository;
         this.equipeRepository = equipeRepository;
+        this.varianteRepository = varianteRepository;
         this.produitMapper = produitMapper;
         this.eventPublisher = eventPublisher;
     }
@@ -66,9 +79,81 @@ public class ProduitServiceImpl implements ProduitService {
             ProduitStatut statut,
             Pageable pageable
     ) {
-        Page<Produit> page = produitRepository.findByFilters(equipeId, saisonId, marqueId, statut, pageable);
-        Page<ProduitSummaryDto> summaryPage = page.map(produitMapper::toSummaryDto);
+        return getProducts(equipeId, saisonId, marqueId, null, null, null, statut, pageable);
+    }
+
+    @Override
+    public PageResponse<ProduitSummaryDto> getProducts(
+            Long equipeId,
+            Long saisonId,
+            Long marqueId,
+            String equipeNom,
+            String saisonNom,
+            String marqueNom,
+            ProduitStatut statut,
+            Pageable pageable
+    ) {
+        String normalizedEquipeNom = normalizeFilter(equipeNom);
+        String normalizedSaisonNom = normalizeFilter(saisonNom);
+        String normalizedMarqueNom = normalizeFilter(marqueNom);
+
+        Page<Produit> page;
+        if (normalizedEquipeNom == null && normalizedSaisonNom == null && normalizedMarqueNom == null) {
+            page = produitRepository.findByFilters(equipeId, saisonId, marqueId, statut, pageable);
+        } else {
+            page = produitRepository.findByFilters(
+                    equipeId,
+                    saisonId,
+                    marqueId,
+                    normalizedEquipeNom,
+                    normalizedSaisonNom,
+                    normalizedMarqueNom,
+                    statut,
+                    pageable
+            );
+        }
+
+        Map<Long, List<Long>> varianteIdsParProduit = chargerVarianteIds(page.getContent());
+        Page<ProduitSummaryDto> summaryPage = page.map(produit -> produitMapper.toSummaryDto(
+                produit,
+                varianteIdsParProduit.getOrDefault(produit.getIdProduit(), List.of())
+        ));
         return PageResponse.from(summaryPage);
+    }
+
+    private Map<Long, List<Long>> chargerVarianteIds(List<Produit> produits) {
+        List<Long> produitIds = produits.stream()
+                .map(Produit::getIdProduit)
+                .filter(Objects::nonNull)
+                .toList();
+        if (produitIds.isEmpty()) {
+            return Map.of();
+        }
+        return varianteRepository.findVarianteIdsByProduitIds(produitIds).stream()
+                .collect(Collectors.groupingBy(
+                        VarianteRepository.VarianteIdView::getProduitId,
+                        Collectors.mapping(VarianteRepository.VarianteIdView::getVarianteId, Collectors.toList())
+                ));
+    }
+
+    @Override
+    public CatalogueFiltersDto getAvailableFilters() {
+        List<MarqueDto> marques = marqueRepository.findAll().stream()
+                .sorted(Comparator.comparing(Marque::getNomMarque, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .map(m -> new MarqueDto(m.getIdMarque(), m.getNomMarque(), m.getLogoUrl()))
+                .toList();
+
+        List<SaisonDto> saisons = saisonRepository.findAll().stream()
+                .sorted(Comparator.comparing(Saison::getNom, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .map(s -> new SaisonDto(s.getIdSaison(), s.getNom()))
+                .toList();
+
+        List<EquipeDto> equipes = equipeRepository.findAll().stream()
+                .sorted(Comparator.comparing(Equipe::getNom, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .map(e -> new EquipeDto(e.getIdEquipe(), e.getNom(), e.getLogoUrl(), e.getType()))
+                .toList();
+
+        return new CatalogueFiltersDto(marques, saisons, equipes);
     }
 
     @Override
@@ -158,6 +243,10 @@ public class ProduitServiceImpl implements ProduitService {
             produit.setStatut(updateInput.statut());
         }
 
+        if (updateInput.photoUrl() != null) {
+            produit.setPhotoUrl(updateInput.photoUrl().isBlank() ? null : updateInput.photoUrl().trim());
+        }
+
         Produit saved = produitRepository.save(produit);
         if (updateInput.statut() != null && previousStatus != updateInput.statut()) {
             eventPublisher.publishEvent(ProductStatusChangedEvent.create(
@@ -175,5 +264,9 @@ public class ProduitServiceImpl implements ProduitService {
                 .orElseThrow(() -> new ResourceNotFoundException("Produit introuvable avec l'identifiant : " + id));
         produit.setEnStock(enStock);
         produitRepository.save(produit);
+    }
+
+    private static String normalizeFilter(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }

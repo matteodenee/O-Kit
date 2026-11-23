@@ -1,6 +1,7 @@
 package com.okit.catalogue.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.okit.catalogue.dto.CatalogueFiltersDto;
 import com.okit.catalogue.dto.EquipeDto;
 import com.okit.catalogue.dto.MarqueDto;
 import com.okit.catalogue.dto.PageResponse;
@@ -10,8 +11,10 @@ import com.okit.catalogue.dto.ProduitSummaryDto;
 import com.okit.catalogue.dto.ProduitUpdateInputDto;
 import com.okit.catalogue.dto.SaisonDto;
 import com.okit.catalogue.dto.StockStatusUpdateDto;
+import com.okit.catalogue.dto.VarianteDto;
 import com.okit.catalogue.entities.EquipeType;
 import com.okit.catalogue.entities.ProduitStatut;
+import com.okit.catalogue.entities.Taille;
 import com.okit.catalogue.exceptions.BusinessValidationException;
 import com.okit.catalogue.exceptions.GlobalExceptionHandler;
 import com.okit.catalogue.exceptions.ResourceNotFoundException;
@@ -19,18 +22,23 @@ import com.okit.catalogue.services.ProduitService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.mockito.ArgumentMatchers.any;
@@ -71,7 +79,9 @@ class ProduitControllerTest {
                 "Nike",
                 "2024/2025",
                 "PSG",
-                ProduitStatut.ACTIF
+                ProduitStatut.ACTIF,
+                List.of(),
+                null
         );
 
         detailDto = new ProduitDetailDto(
@@ -376,5 +386,158 @@ class ProduitControllerTest {
                 .andExpect(jsonPath("$.error", is("Internal Server Error")))
                 .andExpect(jsonPath("$.message", is("Une erreur interne inattendue est survenue")))
                 .andExpect(jsonPath("$.path", is("/api/v1/products/1")));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/products : filtre par marque, saison et club par nom et expose photoUrl")
+    void shouldFilterProductsByNamesAndExposePhotoUrl() throws Exception {
+        ProduitSummaryDto summaryWithPhoto = new ProduitSummaryDto(
+                1L,
+                "Maillot PSG Domicile 2025/2026",
+                new BigDecimal("83.33"),
+                new BigDecimal("100.00"),
+                true,
+                "Nike",
+                "2025/2026",
+                "Paris Saint-Germain",
+                ProduitStatut.ACTIF,
+                List.of(),
+                "data:image/svg+xml;utf8,<svg></svg>"
+        );
+        PageResponse<ProduitSummaryDto> pageResponse = new PageResponse<>(
+                List.of(summaryWithPhoto), 0, 10, 1, 1, true
+        );
+
+        when(produitService.getProducts(
+                eq(null),
+                eq(null),
+                eq(null),
+                eq("Paris Saint-Germain"),
+                eq("2025/2026"),
+                eq("Nike"),
+                eq(ProduitStatut.ACTIF),
+                any(Pageable.class)
+        )).thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/v1/products")
+                        .param("club", "Paris Saint-Germain")
+                        .param("saison", "2025/2026")
+                        .param("marque", "Nike")
+                        .param("statut", "ACTIF")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].nomMarque", is("Nike")))
+                .andExpect(jsonPath("$.content[0].nomSaison", is("2025/2026")))
+                .andExpect(jsonPath("$.content[0].nomEquipe", is("Paris Saint-Germain")))
+                .andExpect(jsonPath("$.content[0].photoUrl", is("data:image/svg+xml;utf8,<svg></svg>")));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/products : trie par prix croissant et décroissant via tri et sort")
+    void shouldSortByPriceAscAndDesc() throws Exception {
+        PageResponse<ProduitSummaryDto> pageResponse = new PageResponse<>(
+                List.of(summaryDto), 0, 10, 1, 1, true
+        );
+        when(produitService.getProducts(eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                .thenReturn(pageResponse);
+
+        // 1. tri=prix_asc
+        mockMvc.perform(get("/api/v1/products").param("tri", "prix_asc"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(produitService).getProducts(eq(null), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.ASC, "prixDeBase"));
+
+        // 2. tri=prix_desc
+        mockMvc.perform(get("/api/v1/products").param("tri", "prix_desc"))
+                .andExpect(status().isOk());
+
+        verify(produitService, org.mockito.Mockito.times(2))
+                .getProducts(eq(null), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.DESC, "prixDeBase"));
+
+        // 3. sort=prixDeBase,asc
+        mockMvc.perform(get("/api/v1/products").param("sort", "prixDeBase,asc"))
+                .andExpect(status().isOk());
+
+        verify(produitService, org.mockito.Mockito.times(3))
+                .getProducts(eq(null), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.ASC, "prixDeBase"));
+
+        // 4. sort=prixDeBase,desc
+        mockMvc.perform(get("/api/v1/products").param("sort", "prixDeBase,desc"))
+                .andExpect(status().isOk());
+
+        verify(produitService, org.mockito.Mockito.times(4))
+                .getProducts(eq(null), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.DESC, "prixDeBase"));
+
+        // 5. sort=prixTTC,desc -> mappé vers prixDeBase DESC
+        mockMvc.perform(get("/api/v1/products").param("sort", "prixTTC,desc"))
+                .andExpect(status().isOk());
+
+        verify(produitService, org.mockito.Mockito.times(5))
+                .getProducts(eq(null), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort()).isEqualTo(Sort.by(Sort.Direction.DESC, "prixDeBase"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/products/filters : retourne 200 OK avec marques, saisons et équipes")
+    void shouldReturnAvailableFilters() throws Exception {
+        CatalogueFiltersDto filtersDto = new CatalogueFiltersDto(
+                List.of(new MarqueDto(1L, "Adidas", null), new MarqueDto(2L, "Nike", null)),
+                List.of(new SaisonDto(1L, "2024"), new SaisonDto(2L, "2025/2026")),
+                List.of(new EquipeDto(1L, "Paris Saint-Germain", null, EquipeType.CLUB))
+        );
+        when(produitService.getAvailableFilters()).thenReturn(filtersDto);
+
+        mockMvc.perform(get("/api/v1/products/filters")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.marques", hasSize(2)))
+                .andExpect(jsonPath("$.marques[0].nomMarque", is("Adidas")))
+                .andExpect(jsonPath("$.saisons", hasSize(2)))
+                .andExpect(jsonPath("$.saisons[1].nom", is("2025/2026")))
+                .andExpect(jsonPath("$.equipes", hasSize(1)))
+                .andExpect(jsonPath("$.equipes[0].nom", is("Paris Saint-Germain")));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/products/1 : retourne photoUrl et les 8 variantes de tailles (XXS à XXXL)")
+    void shouldReturnProductDetailWithPhotoUrlAndVariantes() throws Exception {
+        List<VarianteDto> variantes = Arrays.stream(Taille.values())
+                .map(t -> new VarianteDto((long) (t.ordinal() + 1), t))
+                .toList();
+        ProduitDetailDto richDetail = new ProduitDetailDto(
+                1L,
+                "Maillot Domicile",
+                "Superbe maillot officiel",
+                new BigDecimal("90.00"),
+                new BigDecimal("108.00"),
+                new BigDecimal("108.00"),
+                0.25,
+                "Bleu",
+                "A",
+                true,
+                true,
+                ProduitStatut.ACTIF,
+                new MarqueDto(1L, "Nike", "https://example.com/nike.png"),
+                new SaisonDto(1L, "2024/2025"),
+                new EquipeDto(1L, "PSG", "https://example.com/psg.png", EquipeType.CLUB),
+                new BigDecimal("20.00"),
+                null,
+                variantes,
+                "https://cdn.okit.fr/psg.svg"
+        );
+        when(produitService.getProductById(1L)).thenReturn(richDetail);
+
+        mockMvc.perform(get("/api/v1/products/1")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.photoUrl", is("https://cdn.okit.fr/psg.svg")))
+                .andExpect(jsonPath("$.variantes", hasSize(8)))
+                .andExpect(jsonPath("$.variantes[0].taille", is("XXS")))
+                .andExpect(jsonPath("$.variantes[7].taille", is("XXXL")));
     }
 }

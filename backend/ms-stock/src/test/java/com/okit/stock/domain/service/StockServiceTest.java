@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.okit.stock.domain.exception.NotFoundException;
 import com.okit.stock.persistence.entity.Notification;
 import com.okit.stock.persistence.repository.IdempotentRequestRepository;
+import com.okit.stock.persistence.entity.StockMovement;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -207,4 +208,30 @@ class StockServiceTest extends AbstractIntegrationTest {
         assertThat(stockRepository.findByIdVariante(401L).orElseThrow().getStockActuel()).isEqualTo(10);
         assertThat(idempotentRepository.count()).isZero(); // l'échec n'est pas mémorisé
     }
+
+    @Test
+    @DisplayName("Ajustement : valeur cible, mouvement SELLER_ADJUSTMENT, alerte et réarmement")
+    void testAdjust() {
+        stockService.create(new CreateStockRequest(700L, 20, 10));
+
+        StockDto down = stockService.adjust(700L, 8);   // -12 : franchit le seuil
+        assertThat(down.stock()).isEqualTo(8);
+        assertThat(notificationRepository.count()).isEqualTo(1);
+        assertThat(movementRepository.count()).isEqualTo(2); // INITIAL + ajustement
+        assertThat(movementRepository.findAll()).anyMatch(m ->
+                m.getReason() == StockMovement.Reason.SELLER_ADJUSTMENT && m.getQuantityChange() == -12);
+
+        stockService.adjust(700L, 8);                    // écart nul : rien ne change
+        assertThat(movementRepository.count()).isEqualTo(2);
+        assertThat(notificationRepository.count()).isEqualTo(1);
+
+        stockService.adjust(700L, 30);                   // remontée : alerte réarmée
+        assertThat(stockRepository.findByIdVariante(700L).orElseThrow().isAlertActive()).isFalse();
+
+        stockService.adjust(700L, 0);                    // rupture : notification OUT_OF_STOCK
+        assertThat(notificationRepository.count()).isEqualTo(2);
+
+        assertThatThrownBy(() -> stockService.adjust(999L, 5)).isInstanceOf(NotFoundException.class);
+    }
+
 }

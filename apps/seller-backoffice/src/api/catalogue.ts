@@ -16,6 +16,9 @@ export type ProductSummary = {
   nomSaison: string | null;
   nomEquipe: string | null;
   statut: ProductStatus;
+  photoUrl?: string | null;
+  /** Identifiants des tailles, pour interroger le stock réel dans ms-stock. */
+  varianteIds?: number[];
 };
 
 export type ProductDetail = {
@@ -37,6 +40,7 @@ export type ProductDetail = {
   tauxTva: number;
   promotionActive: unknown | null;
   variantes: ProductVariant[];
+  photoUrl?: string | null;
 };
 
 export type ProductUpdate = {
@@ -48,6 +52,7 @@ export type ProductUpdate = {
   impactEnvi: string;
   estFlocable: boolean;
   statut: ProductStatus;
+  photoUrl?: string | null;
 };
 
 type ProductPage = {

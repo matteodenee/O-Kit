@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ms-stock-config
+  labels:
+    app.kubernetes.io/name: ms-stock
+    app.kubernetes.io/instance: okit
+    app.kubernetes.io/part-of: okit
+    app.kubernetes.io/component: backend
+data:
+  SERVER_PORT: "8083"
+  DB_URL: jdbc:postgresql://postgres-db:5432/okit_stock_db
+  DB_USERNAME: okit_stock
+  DB_POOL_SIZE: "10"
+  OIDC_ISSUER_URI: https://dams5-07.students.polytech.lange.xyz/realms/okit
+  OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+  SWAGGER_ENABLED: "false"

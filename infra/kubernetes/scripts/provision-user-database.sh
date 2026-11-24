@@ -14,9 +14,7 @@ if [ -z "$password_base64" ]; then
   exit 1
 fi
 
-{
-  printf '%s\n' "$password_base64"
-  cat <<'REMOTE_SCRIPT'
+REMOTE_SCRIPT=$(cat <<'REMOTE_SCRIPT'
 set -eu
 
 IFS= read -r password_base64
@@ -41,4 +39,7 @@ psql --username "$admin_user" --dbname postgres --set ON_ERROR_STOP=1 \
 
 echo "Database okit_users and role okit_user are ready."
 REMOTE_SCRIPT
-} | kubectl -n "$NAMESPACE" exec -i "$POSTGRES_WORKLOAD" -- sh -s
+)
+
+printf '%s\n' "$password_base64" | \
+  kubectl -n "$NAMESPACE" exec -i "$POSTGRES_WORKLOAD" -- sh -c "$REMOTE_SCRIPT"

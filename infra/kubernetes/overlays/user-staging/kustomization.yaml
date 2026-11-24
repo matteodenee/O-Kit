@@ -8,10 +8,10 @@ resources:
 images:
   - name: registry.example.invalid/okit/keycloak
     newName: registry.gitlab.com/iwa-group2/o-kit/keycloak
-    newTag: a08da78
+    newTag: replace-me
   - name: registry.example.invalid/okit/user-service
     newName: registry.gitlab.com/iwa-group2/o-kit/user-service
-    newTag: a08da78
+    newTag: replace-me
   - name: registry.example.invalid/okit/api-gateway
     newName: registry.gitlab.com/iwa-group2/o-kit/api-gateway
-    newTag: a08da78
+    newTag: replace-me

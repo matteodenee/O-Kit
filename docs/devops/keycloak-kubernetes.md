@@ -44,24 +44,27 @@ Le Secret `keycloak-secrets` doit fournir :
 
 - `database-password` ;
 - `bootstrap-admin-username` ;
-- `bootstrap-admin-password`.
+- `bootstrap-admin-password` ;
+- `ms-commande-client-secret`.
 
 Aucune valeur réelle n'est conservée dans Git. Le compte bootstrap sert
 uniquement à la première administration ; son mot de passe doit être fort et
 conservé dans le gestionnaire de secrets retenu par l'équipe.
 
-Le reset de mot de passe utilise Mailpit uniquement en développement local.
-Avant sa recette sur Kubernetes, l'équipe de déploiement doit sélectionner un
-fournisseur SMTP et injecter son hôte, son port, l'expéditeur et ses éventuels
-identifiants dans la configuration Keycloak via Secret. Aucun identifiant SMTP
-ne doit être ajouté au realm JSON versionné.
+Le reset de mot de passe est désactivé sur Kubernetes tant qu'aucun SMTP de
+production n'est disponible. Le realm versionné ne contient plus la
+configuration Mailpit locale. Sa réactivation nécessitera un fournisseur SMTP
+et des identifiants injectés via Secret ; aucun identifiant SMTP ne doit être
+ajouté au realm JSON versionné.
 
 ## Persistance et import du realm
 
 PostgreSQL demande un volume de 2 Gio. Le realm est importé au démarrage
 uniquement s'il n'existe pas encore dans la base. Modifier
 `infra/keycloak/import/okit-realm.json` ne migre donc pas automatiquement un
-realm existant.
+realm existant. Après chaque rollout, le script embarqué
+`/opt/keycloak/bin/reconcile-kubernetes-realm.sh` synchronise de manière
+idempotente les paramètres, rôles, clients, scopes et mappers attendus.
 
 Le PVC utilise la classe `nfs-tower` observée sur le namespace. Il est distinct
 du PVC historique `pgdata-pvc`, qui ne doit pas être modifié ou supprimé.
@@ -73,8 +76,8 @@ doit jamais être utilisée comme mécanisme normal de mise à jour.
 
 | Composant | CPU demandé | Mémoire demandée | CPU maximum | Mémoire maximum |
 | --- | ---: | ---: | ---: | ---: |
-| Keycloak | 300m | 512Mi | 1000m | 1Gi |
+| Keycloak | 300m | 768Mi | 1000m | 1536Mi |
 | PostgreSQL Keycloak | 100m | 256Mi | 500m | 512Mi |
 
-Avec le service utilisateur et sa base, les demandes restent sous le quota de
-2 CPU et 4 Gio du namespace.
+Avec le service utilisateur et sa base, les demandes restent sous le quota
+actuel de 4 CPU et 8 Gio de mémoire demandée du namespace.

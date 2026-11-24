@@ -2,18 +2,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ms-stock
-  namespace: polytech-dams5-07
   labels:
     app.kubernetes.io/name: ms-stock
     app.kubernetes.io/instance: okit
+    app.kubernetes.io/part-of: okit
     app.kubernetes.io/component: backend
 spec:
   replicas: 1
+  revisionHistoryLimit: 3
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1
       maxUnavailable: 0
+      maxSurge: 1
+  # Sélecteur identique à l'existant (champ immuable)
   selector:
     matchLabels:
       app.kubernetes.io/name: ms-stock
@@ -23,39 +25,57 @@ spec:
       labels:
         app.kubernetes.io/name: ms-stock
         app.kubernetes.io/instance: okit
+        app.kubernetes.io/part-of: okit
         app.kubernetes.io/component: backend
     spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: gitlab-registry
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: ms-stock
-          image: registry.gitlab.com/iwa-group2/o-kit/ms-stock:latest
-          imagePullPolicy: Always
+          image: ms-stock
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8083
               protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: ms-stock-config
           env:
-            - name: SERVER_PORT
-              value: "8083"
-            - name: DB_URL
-              value: jdbc:postgresql://postgres:5432/okit_stock_db
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: stock-db-credentials
-                  key: username
+            # Secret créé directement dans le cluster, jamais versionné
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: stock-db-credentials
-                  key: password
-            - name: OIDC_ISSUER_URI
-              value: https://dams5-07.students.polytech.lange.xyz/realms/okit
-            - name: OIDC_JWK_SET_URI
-              value: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
-            - name: SWAGGER_ENABLED
-              value: "false"
-            - name: JAVA_TOOL_OPTIONS
-              value: -XX:MaxRAMPercentage=70
+                  name: ms-stock-secrets
+                  key: database-password
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
           resources:
             requests:
               cpu: 100m
@@ -63,19 +83,17 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-          livenessProbe:
-            httpGet:
-              path: /actuator/health/liveness
-              port: 8083
-            initialDelaySeconds: 40
-            periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /actuator/health/readiness
-              port: 8083
-            initialDelaySeconds: 25
-            periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+      terminationGracePeriodSeconds: 40

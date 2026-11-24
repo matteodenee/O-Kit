@@ -1,9 +1,9 @@
 stages:
   - validate
   - test
-  - build   # build et push des images Docker vers le registry GitLab
-  - scan    # reserve pour trivy
-  - deploy  # deploiement sur le cluster Polytech
+  - build
+  - scan
+  - deploy
 
 k8s-lint:
   stage: validate
@@ -117,6 +117,45 @@ test:ms-utilisateur:
         - backend/ms-utilisateur/**/*
         - .gitlab-ci.yml
 
+test:api-gateway:
+  stage: test
+  image: maven:3.9.11-eclipse-temurin-21-alpine
+  script:
+    - cd services/api-gateway
+    - mvn --batch-mode --no-transfer-progress clean verify
+  artifacts:
+    when: always
+    reports:
+      junit: services/api-gateway/target/surefire-reports/TEST-*.xml
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - services/api-gateway/**/*
+        - infra/kubernetes/gateway/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - services/api-gateway/**/*
+        - infra/kubernetes/gateway/**/*
+        - .gitlab-ci.yml
+
+test:keycloak-extension:
+  stage: test
+  image: maven:3.9.11-eclipse-temurin-21-alpine
+  script:
+    - cd infra/keycloak/extensions/direct-realm-roles
+    - mvn --batch-mode --no-transfer-progress clean verify
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - infra/keycloak/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - infra/keycloak/**/*
+        - .gitlab-ci.yml
+
 test:ms-stock:
   stage: test
   image: maven:3.9.11-eclipse-temurin-21-alpine
@@ -154,6 +193,42 @@ test:ms-stock:
         - backend/ms-stock/**/*
         - .gitlab-ci.yml
 
+.build-user-stack-image:
+  stage: build
+  image: docker:27.3.1
+  services:
+    - name: docker:27.3.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" "$BUILD_CONTEXT"
+    - docker push "$CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+build:user-service:
+  extends: .build-user-stack-image
+  variables:
+    IMAGE_NAME: user-service
+    BUILD_CONTEXT: backend/ms-utilisateur
+
+build:keycloak:
+  extends: .build-user-stack-image
+  variables:
+    IMAGE_NAME: keycloak
+    BUILD_CONTEXT: infra/keycloak
+
+build:api-gateway:
+  extends: .build-user-stack-image
+  variables:
+    IMAGE_NAME: api-gateway
+    BUILD_CONTEXT: services/api-gateway
+
 build:ms-stock:
   stage: build
   image: docker:27.3.1
@@ -176,6 +251,61 @@ build:ms-stock:
         - backend/ms-stock/**/*
         - k8s/services/ms-stock/**/*
         - .gitlab-ci.yml
+
+.scan-user-stack-image:
+  stage: scan
+  image:
+    name: aquasec/trivy:0.58.1
+    entrypoint: [""]
+  variables:
+    TRIVY_USERNAME: $CI_REGISTRY_USER
+    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+  script:
+    - trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed "$CI_REGISTRY_IMAGE/$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+scan:user-service:
+  extends: .scan-user-stack-image
+  needs: ["build:user-service"]
+  variables:
+    IMAGE_NAME: user-service
+
+scan:keycloak:
+  extends: .scan-user-stack-image
+  needs: ["build:keycloak"]
+  variables:
+    IMAGE_NAME: keycloak
+
+scan:api-gateway:
+  extends: .scan-user-stack-image
+  needs: ["build:api-gateway"]
+  variables:
+    IMAGE_NAME: api-gateway
+
+deploy:user-stack:
+  stage: deploy
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  needs:
+    - scan:user-service
+    - scan:keycloak
+    - scan:api-gateway
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+    - chmod 600 ~/.kube/config
+    - kubectl config set-context --current --namespace=polytech-dams5-07
+  script:
+    - infra/kubernetes/scripts/deploy-user-stack.sh "$CI_COMMIT_SHORT_SHA"
+  environment:
+    name: polytech-dams5-07
+    url: https://dams5-07.students.polytech.lange.xyz
+  when: manual
+  allow_failure: false
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
 
 deploy:ms-stock:
   stage: deploy

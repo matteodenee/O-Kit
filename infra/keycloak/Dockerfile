@@ -19,5 +19,6 @@ FROM quay.io/keycloak/keycloak:26.0.5
 
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 COPY themes/ /opt/keycloak/themes/
+COPY reconcile-kubernetes-realm.sh /opt/keycloak/bin/reconcile-kubernetes-realm.sh
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]

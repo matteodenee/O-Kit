@@ -5,20 +5,11 @@
   "sslRequired": "external",
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
-  "resetPasswordAllowed": true,
+  "resetPasswordAllowed": false,
   "rememberMe": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "verifyEmail": false,
-  "smtpServer": {
-    "host": "mailpit",
-    "port": "1025",
-    "from": "noreply@okit.local",
-    "fromDisplayName": "O'kit",
-    "auth": "false",
-    "starttls": "false",
-    "ssl": "false"
-  },
   "roles": {
     "realm": [
       {
@@ -135,7 +126,6 @@
       "publicClient": false,
       "bearerOnly": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "ms-commande-dev-secret",
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,

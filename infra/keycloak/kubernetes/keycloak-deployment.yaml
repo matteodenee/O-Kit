@@ -81,6 +81,11 @@ spec:
               value: "true"
             - name: KC_HTTP_MANAGEMENT_PORT
               value: "9000"
+            - name: OKIT_MS_COMMANDE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secrets
+                  key: ms-commande-client-secret
           startupProbe:
             httpGet:
               path: /health/started
@@ -105,10 +110,10 @@ spec:
           resources:
             requests:
               cpu: 300m
-              memory: 512Mi
+              memory: 768Mi
             limits:
               cpu: "1"
-              memory: 1Gi
+              memory: 1536Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

@@ -41,6 +41,8 @@ un favori lorsque Catalogue désactive le produit.
 | `user-service` | Profil, adresses et wishlist de l'acheteur | `http://localhost:8081` |
 | `catalogue-service` | Catalogue des produits | accès interne `catalogue-service:8082` |
 | `api-gateway` | Entrée des API | `http://localhost:8080` |
+| `mcp-service` | Interface MCP en lecture seule | `http://localhost:8089/mcp` |
+| `ms-chatbot` | Assistant acheteur, client MCP | `http://localhost:8086` |
 | Client Expo | Application acheteur | `http://localhost:19006` |
 | Backoffice React | Authentification vendeur | `http://localhost:5173` |
 
@@ -83,11 +85,12 @@ Vérification rapide :
 curl --fail http://127.0.0.1:8090/realms/okit/.well-known/openid-configuration
 curl --fail http://127.0.0.1:8081/health
 curl --fail http://127.0.0.1:8080/health
+curl --fail http://127.0.0.1:8089/actuator/health
 curl --include http://127.0.0.1:8080/api/v1/users/me
 ./backend/ms-utilisateur/scripts/test-local-user-flow.sh
 ```
 
-Les trois premières requêtes doivent réussir, la quatrième doit retourner
+Les quatre premières requêtes doivent réussir, la cinquième doit retourner
 `401 Unauthorized`, puis le script doit annoncer `Local user flow succeeded`.
 
 ## Interfaces
@@ -139,6 +142,8 @@ SELLER, se trouve dans [`README_DEVELOPPEUR.md`](README_DEVELOPPEUR.md).
 - [Gestion vendeur du Catalogue](docs/seller/catalogue-management.md)
 - [Gestion des adresses](docs/functional/user-addresses.md)
 - [Décisions d'architecture](docs/decisions/)
+- [Contrat et démonstration MCP](docs/api/mcp-service.md)
+- [Architecture MCP](docs/decisions/0011-mcp-interface.md)
 
 Les fichiers `.env`, mots de passe, tokens, kubeconfigs et autres secrets ne
 doivent jamais être versionnés. Ne pas utiliser `docker compose down --volumes`

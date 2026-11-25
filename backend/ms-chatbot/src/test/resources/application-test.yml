@@ -12,3 +12,4 @@ okit:
   chatbot:
     mode: polytech              # active le quota ; l'Assistant est remplacé par un mock dans les tests
     questions-par-jour: 2
+    mcp-url: http://localhost:1/mcp

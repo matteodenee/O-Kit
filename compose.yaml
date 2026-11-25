@@ -82,6 +82,38 @@ services:
       keycloak:
         condition: service_started
 
+  # Interface MCP externe et couche d'outils métier en lecture seule
+  mcp-service:
+    build:
+      context: ./backend/mcp-service
+    container_name: okit-mcp-service
+    environment:
+      - SERVER_PORT=8089
+      - OIDC_ISSUER_URI=http://localhost:8090/realms/okit
+      - OIDC_JWK_SET_URI=http://keycloak:8080/realms/okit/protocol/openid-connect/certs
+      - CATALOGUE_SERVICE_URL=http://catalogue-service:8082
+      - STOCK_SERVICE_URL=http://stock-service:8083
+      - COMMANDE_SERVICE_URL=http://commande-service:8085
+      - MCP_ALLOWED_ORIGIN=${MCP_ALLOWED_ORIGIN:-http://localhost:6274}
+    ports:
+      - "127.0.0.1:8089:8089"
+    depends_on:
+      keycloak:
+        condition: service_started
+      catalogue-service:
+        condition: service_healthy
+      stock-service:
+        condition: service_started
+      commande-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --spider http://127.0.0.1:8089/actuator/health/readiness"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    mem_limit: 512m
+
   # Microservice Chatbot (assistant acheteur, LLM de la plateforme IA Polytech)
   chatbot-service:
     build:
@@ -97,14 +129,14 @@ services:
       - LLM_MODEL=${LLM_MODEL:-souverain-llm-qwen}
       # Clé personnelle ou de groupe : uniquement dans .env, jamais versionnée
       - POLYTECH_API_KEY=${POLYTECH_API_KEY:-cle-non-configuree}
-      - CATALOGUE_SERVICE_URL=http://catalogue-service:8082
-      - STOCK_SERVICE_URL=http://stock-service:8083
-      - COMMANDE_SERVICE_URL=http://commande-service:8085
+      - MCP_SERVICE_URL=http://mcp-service:8089/mcp
     ports:
       - "127.0.0.1:8086:8086"
     depends_on:
       keycloak:
         condition: service_started
+      mcp-service:
+        condition: service_healthy
     mem_limit: 512m
 
   mailpit:
@@ -263,6 +295,7 @@ services:
       STOCK_SERVICE_URL: http://stock-service:8083
       COMMANDE_SERVICE_URL: http://commande-service:8085
       CHATBOT_SERVICE_URL: http://chatbot-service:8086
+      MCP_SERVICE_URL: http://mcp-service:8089
       OIDC_ISSUER_URI: http://localhost:8090/realms/okit
       OIDC_JWK_SET_URI: http://keycloak:8080/realms/okit/protocol/openid-connect/certs
       CORS_ALLOWED_ORIGIN: http://localhost:19006

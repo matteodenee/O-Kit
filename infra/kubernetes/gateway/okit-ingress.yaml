@@ -20,6 +20,13 @@ spec:
                 name: api-gateway
                 port:
                   name: http
+          - path: /mcp
+            pathType: Exact
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  name: http
           - path: /realms
             pathType: Prefix
             backend:

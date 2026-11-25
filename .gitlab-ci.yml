@@ -14,6 +14,7 @@ k8s-lint:
     - kubectl kustomize k8s/services/ms-catalogue/
     - kubectl kustomize k8s/services/ms-utilisateur/
     - kubectl kustomize k8s/services/ms-commande/
+    - kubectl kustomize k8s/services/mcp-service/
     - kubectl kustomize infra/kubernetes/gateway/
     - kubectl kustomize infra/keycloak/
     - kubectl kustomize infra/kubernetes/overlays/user-staging/
@@ -114,4 +115,50 @@ test:ms-utilisateur:
     - if: '$CI_COMMIT_BRANCH'
       changes:
         - backend/ms-utilisateur/**/*
+        - .gitlab-ci.yml
+
+test:mcp-service:
+  stage: test
+  image: maven:3.9.11-eclipse-temurin-21-alpine
+  script:
+    - cd backend/mcp-service
+    - mvn --batch-mode --no-transfer-progress clean test
+  artifacts:
+    when: always
+    reports:
+      junit: backend/mcp-service/target/surefire-reports/TEST-*.xml
+    paths:
+      - backend/mcp-service/target/surefire-reports/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/mcp-service/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - backend/mcp-service/**/*
+        - .gitlab-ci.yml
+
+test:ms-chatbot:
+  stage: test
+  image: maven:3.9.11-eclipse-temurin-21-alpine
+  script:
+    - cd backend/ms-chatbot
+    - mvn --batch-mode --no-transfer-progress clean test
+  artifacts:
+    when: always
+    reports:
+      junit: backend/ms-chatbot/target/surefire-reports/TEST-*.xml
+    paths:
+      - backend/ms-chatbot/target/surefire-reports/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - backend/ms-chatbot/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - backend/ms-chatbot/**/*
         - .gitlab-ci.yml

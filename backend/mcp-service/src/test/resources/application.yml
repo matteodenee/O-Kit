@@ -1,0 +1,26 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:0/test
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+        type: SYNC
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+
+okit:
+  mcp:
+    services:
+      catalogue-url: http://localhost:1
+      stock-url: http://localhost:1
+      commande-url: http://localhost:1
+    security:
+      allowed-origins:
+        - http://localhost:6274

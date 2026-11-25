@@ -11,18 +11,19 @@ Le LLM est fourni par la **plateforme IA Polytech**, via son adresse compatible 
 ```
 App mobile ──JWT──▶ api-gateway ──POST /api/v1/chat──▶ ms-chatbot ──clé pia_…──▶ plateforme IA
                                                            │
-                                                           └──JWT de l'acheteur──▶ catalogue / stock / commande
+                                                           └──JWT──▶ mcp-service ──▶ catalogue / stock / commande
 ```
 
-Le LLM n'accède à aucune base. Il appelle des **outils** (`tools/OkitTools.java`) qui interrogent
-les autres services avec le JWT de l'acheteur. Il ne voit donc que les commandes de cet acheteur.
+Le LLM n'accède à aucune base. Il découvre et appelle les outils du véritable
+serveur MCP O'Kit avec le JWT de l'acheteur. Il ne voit donc que les commandes
+de cet acheteur.
 
 | Outil | Service appelé |
 | --- | --- |
-| `rechercherProduits(recherche, prixMaxTtc)` | catalogue |
-| `detailProduit(idProduit)` | catalogue + stock |
-| `produitsSimilaires(idProduit)` | catalogue |
-| `mesCommandes()` / `detailCommande(id)` | commande |
+| `search_products` | catalogue |
+| `get_product_details` / `get_product_stock` | catalogue + stock |
+| `find_similar_products` | catalogue |
+| `list_my_orders` / `get_order_status` | commande |
 
 Les retours et annulations sont décrits dans le prompt système
 (`src/main/resources/prompts/systeme.txt`). **La politique de retour y est provisoire et doit

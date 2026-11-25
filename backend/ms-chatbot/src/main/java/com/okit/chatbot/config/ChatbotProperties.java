@@ -9,8 +9,6 @@ public record ChatbotProperties(
         int questionsParJour,
         int historiqueMax,
         int messageMax,
-        Services services
+        String mcpUrl
 ) {
-    public record Services(String catalogueUrl, String stockUrl, String commandeUrl) {
-    }
 }

@@ -36,6 +36,8 @@ class ApiGatewayApplicationTest {
     private static final AtomicReference<String> CATALOGUE_FORWARDED_PATH = new AtomicReference<>();
     private static final AtomicReference<String> CATALOGUE_FORWARDED_AUTHORIZATION = new AtomicReference<>();
     private static final AtomicReference<String> CATALOGUE_FORWARDED_METHOD = new AtomicReference<>();
+    private static final AtomicReference<String> MCP_FORWARDED_AUTHORIZATION = new AtomicReference<>();
+    private static final AtomicReference<String> MCP_FORWARDED_PROTOCOL = new AtomicReference<>();
     private static final DisposableServer USER_SERVICE = HttpServer.create()
             .host("127.0.0.1")
             .port(0)
@@ -61,17 +63,31 @@ class ApiGatewayApplicationTest {
                                 + "\"totalElements\":0,\"totalPages\":0,\"isLast\":true}"));
             })
             .bindNow();
+    private static final DisposableServer MCP_SERVICE = HttpServer.create()
+            .host("127.0.0.1")
+            .port(0)
+            .handle((request, response) -> {
+                MCP_FORWARDED_AUTHORIZATION.set(request.requestHeaders().get(HttpHeaderNames.AUTHORIZATION));
+                MCP_FORWARDED_PROTOCOL.set(request.requestHeaders().get("MCP-Protocol-Version"));
+                return response
+                        .header(HttpHeaderNames.CONTENT_TYPE, "application/json")
+                        .header("Mcp-Session-Id", "test-session")
+                        .sendString(Mono.just("{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}"));
+            })
+            .bindNow();
 
     @DynamicPropertySource
     static void gatewayProperties(DynamicPropertyRegistry registry) {
         registry.add("USER_SERVICE_URL", () -> "http://127.0.0.1:" + USER_SERVICE.port());
         registry.add("CATALOGUE_SERVICE_URL", () -> "http://127.0.0.1:" + CATALOGUE_SERVICE.port());
+        registry.add("MCP_SERVICE_URL", () -> "http://127.0.0.1:" + MCP_SERVICE.port());
     }
 
     @AfterAll
     static void stopUserService() {
         USER_SERVICE.disposeNow();
         CATALOGUE_SERVICE.disposeNow();
+        MCP_SERVICE.disposeNow();
     }
 
     @LocalServerPort
@@ -106,6 +122,33 @@ class ApiGatewayApplicationTest {
                 .uri("/api/v1/users/me")
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void rejectsAnonymousMcpRequest() {
+        webTestClient.post()
+                .uri("/mcp")
+                .bodyValue("{}")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void forwardsAuthenticatedMcpRequestAndProtocolHeaders() {
+        when(jwtDecoder.decode("test-token")).thenReturn(Mono.just(buyerJwt()));
+
+        webTestClient.post()
+                .uri("/mcp")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
+                .header("MCP-Protocol-Version", "2025-03-26")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .bodyValue("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{}}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().valueEquals("Mcp-Session-Id", "test-session");
+
+        assertThat(MCP_FORWARDED_AUTHORIZATION.get()).isEqualTo("Bearer test-token");
+        assertThat(MCP_FORWARDED_PROTOCOL.get()).isEqualTo("2025-03-26");
     }
 
     @Test
@@ -284,6 +327,29 @@ class ApiGatewayApplicationTest {
                 .anySatisfy(predicate -> assertThat(predicate.getArgs())
                         .containsValue("POST")
                         .containsValue("PATCH"));
+    }
+
+    @Test
+    void declaresMcpRouteWithoutPathRewrite() {
+        List<RouteDefinition> routes = routeDefinitionLocator.getRouteDefinitions()
+                .collectList()
+                .block();
+
+        assertThat(routes).isNotNull();
+        RouteDefinition mcpRoute = routes.stream()
+                .filter(route -> route.getId().equals("mcp-service"))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(mcpRoute.getUri().toString())
+                .isEqualTo("http://127.0.0.1:" + MCP_SERVICE.port());
+        assertThat(mcpRoute.getFilters()).isEmpty();
+        assertThat(mcpRoute.getPredicates())
+                .anySatisfy(predicate -> assertThat(predicate.getArgs()).containsValue("/mcp"))
+                .anySatisfy(predicate -> assertThat(predicate.getArgs())
+                        .containsValue("GET")
+                        .containsValue("POST")
+                        .containsValue("DELETE"));
     }
 
     private Jwt buyerJwt() {

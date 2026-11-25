@@ -1,0 +1,57 @@
+server:
+  port: ${SERVER_PORT:8089}
+  shutdown: graceful
+
+spring:
+  application:
+    name: mcp-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+        name: okit-mcp-service
+        version: 0.1.0
+        type: SYNC
+        instructions: Outils O'Kit en lecture seule. Les commandes sont toujours limitées à l'acheteur authentifié.
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        streamable-http:
+          mcp-endpoint: /mcp
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8090/realms/okit}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:http://localhost:8090/realms/okit/protocol/openid-connect/certs}
+
+okit:
+  mcp:
+    services:
+      catalogue-url: ${CATALOGUE_SERVICE_URL:http://localhost:8082}
+      stock-url: ${STOCK_SERVICE_URL:http://localhost:8083}
+      commande-url: ${COMMANDE_SERVICE_URL:http://localhost:8085}
+    security:
+      allowed-origins:
+        - ${MCP_ALLOWED_ORIGIN:http://localhost:6274}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    com.okit.mcp: INFO

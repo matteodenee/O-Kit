@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .access(SecurityConfig::isExclusiveDirectSeller)
                         .pathMatchers(HttpMethod.PATCH, "/api/v1/products", "/api/v1/products/**")
                         .access(SecurityConfig::isExclusiveDirectSeller)
+                        .pathMatchers("/mcp").authenticated()
                         .pathMatchers("/api/**").authenticated()
                         .anyExchange().denyAll())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))

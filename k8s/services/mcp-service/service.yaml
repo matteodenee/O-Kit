@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-service
+  labels:
+    app.kubernetes.io/name: mcp-service
+    app.kubernetes.io/instance: okit
+    app.kubernetes.io/part-of: okit
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: mcp-service
+  ports:
+    - name: http
+      port: 8089
+      targetPort: http
+      protocol: TCP

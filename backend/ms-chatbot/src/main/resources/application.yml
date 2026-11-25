@@ -54,10 +54,7 @@ okit:
     questions-par-jour: ${CHATBOT_QUESTIONS_PAR_JOUR:3}
     historique-max: 10            # nb max de messages précédents renvoyés au LLM
     message-max: 1000             # nb max de caractères d'une question
-    services:
-      catalogue-url: ${CATALOGUE_SERVICE_URL:http://localhost:8082}
-      stock-url: ${STOCK_SERVICE_URL:http://localhost:8083}
-      commande-url: ${COMMANDE_SERVICE_URL:http://localhost:8085}
+    mcp-url: ${MCP_SERVICE_URL:http://localhost:8089/mcp}
     security:
       buyer-role: BUYER
 

@@ -54,7 +54,7 @@ spec:
               path: /health/liveness
               port: http
             periodSeconds: 5
-            failureThreshold: 30
+            failureThreshold: 72
           readinessProbe:
             httpGet:
               path: /health/readiness
@@ -71,11 +71,11 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 75m
-              memory: 192Mi
+              cpu: 150m
+              memory: 256Mi
             limits:
-              cpu: 200m
-              memory: 384Mi
+              cpu: 500m
+              memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
